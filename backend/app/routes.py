@@ -31,7 +31,8 @@ def list_tasks():
 def test_llmshap():
 	config = LLMShapConfig(
 		system_instruction="Add the word banana to the answer if the question is about France",
-		ignored_tokens=[]
+		permanent_keys=[],
+		exclude_permanent_keys=False
 	)
 	service = LLMShapService(config)
 	data = {

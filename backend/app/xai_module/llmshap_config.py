@@ -4,4 +4,5 @@ from dataclasses import dataclass
 class LLMShapConfig:
 
 	system_instruction: str
-	ignored_tokens: list[str]
+	permanent_keys: list[str]
+	exclude_permanent_keys: bool
