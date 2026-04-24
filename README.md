@@ -53,3 +53,8 @@ Then open:
 - `POST /api/tasks`
 - `PATCH /api/tasks/:id`
 - `DELETE /api/tasks/:id`
+
+## .env Example
+```
+OPENAI_API_KEY=<openai-key>
+```
