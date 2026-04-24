@@ -34,9 +34,17 @@ CREATE TABLE IF NOT EXISTS answers (
 CREATE TABLE IF NOT EXISTS diagnosis (
 	id SERIAL PRIMARY KEY,
 	project_id INT NOT NULL,
-	diagnosis TEXT NOT NULL,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
+)
+
+CREATE TABLE IF NOT EXISTS diagnosis_item (
+	id SERIAL PRIMARY KEY,
+	diagnosis_id INT NOT NULL,
+	title TEXT NOT NULL,
+	motivation TEXT NOT NULL,
+	recommendations TEXT NOT NULL,
+    FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE,
 )
 
 CREATE TABLE IF NOT EXISTS diagnosis_sentence_weights (
