@@ -11,15 +11,25 @@ CREATE TABLE IF NOT EXISTS questions (
 	id SERIAL PRIMARY KEY,
 	project_id INT NOT NULL,
 	question TEXT NOT NULL, 
-	answer TEXT DEFAULT NULL,
 	input_type VARCHAR(50) NOT NULL,
 	input_unit VARCHAR(50) DEFAULT NULL,
 	input_min NUMERIC(10, 2) DEFAULT NULL,
 	input_max NUMERIC(10, 2) DEFAULT NULL,
-	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 )
+
+CREATE TABLE IF NOT EXISTS answers (
+    id SERIAL PRIMARY KEY,
+    project_id INT NOT NULL,
+    question_id INT NOT NULL,
+    answer TEXT DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+    UNIQUE (project_id, question_id)
+);
 
 CREATE TABLE IF NOT EXISTS diagnosis (
 	id SERIAL PRIMARY KEY,
@@ -30,10 +40,11 @@ CREATE TABLE IF NOT EXISTS diagnosis (
 )
 
 CREATE TABLE IF NOT EXISTS diagnosis_sentence_weights (
-	id SERIAL PRIMARY KEY,
-	diagnosis_id INT NOT NULL,
-	question TEXT NOT NULL,
-	answer TEXT NOT NULL,
-	sentence_weight NUMERIC(4,3),
-	FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE
-)
+    id SERIAL PRIMARY KEY,
+    diagnosis_id INT NOT NULL,
+    question_id INT NOT NULL,
+    answer TEXT NOT NULL,
+    sentence_weight NUMERIC(4,3),
+    FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+);
