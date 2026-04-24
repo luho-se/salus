@@ -2,7 +2,7 @@ from llmSHAP import DataHandler
 from llmSHAP import BasicPromptCodec
 from llmSHAP import ShapleyAttribution
 from llmSHAP.llm import OpenAIInterface
-from xai_module.llmshap_config import LLMShapConfig
+from .llmshap_config import LLMShapConfig
 
 class LLMShapService:
 
@@ -44,12 +44,12 @@ class LLMShapService:
 			raise ValueError("No data provided for diagnosis")
 
 		self.dh = DataHandler(self.data)
-		self.codec = BasicPromptCodec(system=self.config.system_instruction, self.config.ignored_tokens)
-		self.llm_interface = OpenAIInterface()
+		self.codec = BasicPromptCodec(system=self.config.system_instruction)
+		self.llm_interface = OpenAIInterface(model_name="gpt-4o-mini")
 		self.shapley = ShapleyAttribution(
-			self.dh,
-			self.codec,
-			self.llm_interface,
+			data_handler=self.dh,
+			prompt_codec=self.codec,
+			model=self.llm_interface,
 			use_cache=True,
 			num_threads=2
 		)
@@ -63,14 +63,8 @@ if __name__ == "__main__":
 	)
 	service = LLMShapService(config)
 	data = {
-		"question1": {
-			"question": "What is the capital of France?",
-			"answer": "Paris",
-		},
-		"question2": {
-			"question": "What is the largest mammal?",
-			"answer": "The blue whale",
-		},
+		"question1": "What is the capital of France? answer: Paris",
+		"question2": "What is the largest mammal? answer: squirrel",
 	}
 	service.compute_diagnosis(data)
 	print(service.get_latest_diagnosis())

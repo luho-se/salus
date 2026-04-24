@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request
 
+from .xai_module.llmshap_service import LLMShapService
+from .xai_module.llmshap_config import LLMShapConfig
 from .db import get_db
 
 
@@ -25,6 +27,19 @@ def list_tasks():
         rows = cur.fetchall()
     return jsonify(rows)
 
+@api.get("/llmshap/test")
+def test_llmshap():
+	config = LLMShapConfig(
+		system_instruction="Add the word banana to the answer if the question is about France",
+		ignored_tokens=[]
+	)
+	service = LLMShapService(config)
+	data = {
+		"question1": "What is the capital of France?",
+		"question2": "What is the largest mammal?",
+	}
+	output, attribution = service.compute_diagnosis(data)
+	return jsonify({"output": output, "attribution": attribution})
 
 @api.post("/tasks")
 def create_task():
