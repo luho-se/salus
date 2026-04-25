@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import CreateProjectForm, { CreateProjectValues } from '@/components/CreateProjectForm.vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProjectStore } from '@/stores/projects.store';
+import { ProjectStep } from '@/types/types';
 import { FolderPlus, Plus } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 
@@ -12,6 +13,8 @@ const router = useRouter()
 const projectStore = useProjectStore()
 
 const dialogRef = ref()
+
+onMounted(() => projectStore.loadProjects())
 
 function trigger() {
 	dialogRef.value.toggleDialog()
@@ -27,6 +30,22 @@ const handleNewProject = async (values: CreateProjectValues) => {
 	router.push(`/project/${result.project!.id}`)
 }
 
+function stepLabel(step: ProjectStep): string {
+	if (step === 'INITIAL_PROMPT') return 'Awaiting description'
+	if (step === 'INITIAL_QUESTIONS') return 'Questions ready'
+	return 'Diagnosis ready'
+}
+
+function formatDate(iso: string): string {
+	const date = new Date(iso)
+	const diff = Date.now() - date.getTime()
+	const minutes = Math.floor(diff / 60000)
+	if (minutes < 1) return 'just now'
+	if (minutes < 60) return `${minutes}m ago`
+	const hours = Math.floor(minutes / 60)
+	if (hours < 24) return `${hours}h ago`
+	return `${Math.floor(hours / 24)}d ago`
+}
 </script>
 
 <template>
@@ -35,7 +54,7 @@ const handleNewProject = async (values: CreateProjectValues) => {
 		<div class="flex flex-row justify-between">
 			<div class="flex flex-col">
 				<div class="text-3xl text-secondary-foreground">Your projects</div>
-				<div class="text-muted-foreground">3 active - last updated 2 hours ago</div>
+				<div class="text-muted-foreground">{{ projectStore.projects.length }} project{{ projectStore.projects.length === 1 ? '' : 's' }}</div>
 			</div>
 			<div>
 				<Button size="lg" class="hover:cursor-pointer" @click="trigger">
@@ -43,22 +62,35 @@ const handleNewProject = async (values: CreateProjectValues) => {
 				</Button>
 			</div>
 		</div>
-		<div class="grid grid-cols-2 gap-12 overflow-y-auto min-h-0 flex-1 pb-4">
-			<Card v-for="i in 10" class="min-h-50">
+
+		<div class="grid grid-cols-2 gap-6 overflow-y-auto min-h-0 flex-1 pb-4">
+			<Card
+				v-for="project in projectStore.projects"
+				:key="project.id"
+				class="min-h-40 cursor-pointer hover:shadow-md transition-shadow"
+				@click="router.push(`/project/${project.id}`)"
+			>
 				<CardHeader>
-					<CardTitle>Card Title</CardTitle>
-					<CardDescription>Card Description</CardDescription>
+					<CardTitle>{{ project.title }}</CardTitle>
+					<CardDescription>{{ stepLabel(project.step) }} · {{ formatDate(project.updatedAt) }}</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<p>Card Content</p>
+					<p v-if="project.initialPrompt" class="text-sm text-muted-foreground line-clamp-3">{{ project.initialPrompt }}</p>
+					<p v-else class="text-sm text-muted-foreground italic">No description yet</p>
 				</CardContent>
-				<CardFooter>
-					<p>Card Footer</p>
-				</CardFooter>
 			</Card>
+
+			<!-- Empty state -->
+			<template v-if="!projectStore.loading && projectStore.projects.length === 0">
+				<div class="col-span-2 flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
+					<FolderPlus class="w-12 h-12 opacity-30" />
+					<p>No projects yet</p>
+				</div>
+			</template>
 		</div>
-		<div class="flex flex-col ">
-			<Card class="min-h-50 outline-dashed flex flex-col justify-center">
+
+		<div class="flex flex-col">
+			<Card class="min-h-40 outline-dashed flex flex-col justify-center">
 				<CardHeader>
 					<CardTitle class="text-center flex flex-col justify-center">
 						<div class="flex flex-row justify-center pb-2">
@@ -66,8 +98,7 @@ const handleNewProject = async (values: CreateProjectValues) => {
 						</div>
 						<div>Start a new project</div>
 					</CardTitle>
-					<CardDescription class="text-center">Describe your situation and we'll guide the analysis
-					</CardDescription>
+					<CardDescription class="text-center">Describe your situation and we'll guide the analysis</CardDescription>
 					<CardContent class="flex flex-row justify-center pt-5">
 						<Button size="lg" class="hover:cursor-pointer" @click="trigger">
 							<Plus /> Create project
@@ -76,6 +107,5 @@ const handleNewProject = async (values: CreateProjectValues) => {
 				</CardHeader>
 			</Card>
 		</div>
-
 	</div>
 </template>
