@@ -64,17 +64,13 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 					<CardHeader>
 						<div class="flex items-start justify-between gap-4">
 							<CardTitle class="text-lg">{{ item.title }}</CardTitle>
-							<div class="flex gap-2 flex-shrink-0">
-								<span
-									class="text-xs font-medium px-2 py-0.5 rounded-full"
-									:class="probabilityStyle[item.probability]"
-								>
+							<div class="flex gap-2 shrink-0">
+								<span class="text-xs font-medium px-2 py-0.5 rounded-full"
+									:class="probabilityStyle[item.probability]">
 									{{ item.probability }}
 								</span>
-								<span
-									class="text-xs font-medium px-2 py-0.5 rounded-full"
-									:class="careTypeStyle[item.careType]"
-								>
+								<span class="text-xs font-medium px-2 py-0.5 rounded-full"
+									:class="careTypeStyle[item.careType]">
 									{{ careTypeLabel[item.careType] }}
 								</span>
 							</div>
@@ -86,7 +82,8 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 							<p class="text-sm">{{ item.motivation }}</p>
 						</div>
 						<div>
-							<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Recommendations</p>
+							<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+								Recommendations</p>
 							<p class="text-sm">{{ item.recommendations }}</p>
 						</div>
 					</CardContent>
