@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BodyLocationSelector from '@/components/BodyLocationSelector.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -109,12 +110,11 @@ async function handleSubmit() {
 						</span>
 					</div>
 
-					<!-- body_location placeholder -->
-					<div v-else-if="currentQuestion.inputType === 'body_location'">
-						<Button variant="outline" disabled class="opacity-50 cursor-not-allowed">
-							Body location selector — coming soon
-						</Button>
-					</div>
+					<!-- body_location selector -->
+					<BodyLocationSelector
+						v-else-if="currentQuestion.inputType === 'body_location'"
+						v-model="currentAnswer"
+					/>
 				</CardContent>
 			</Card>
 

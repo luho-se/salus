@@ -50,7 +50,7 @@ export const useDiagnosisStore = defineStore('diagnosis', () => {
 		errorState.value = ''
 
 		try {
-			const itemsResponse = await api.get<DiagnosisItem[]>(`/diagnosis/${diagnosisId}/items`)
+			const itemsResponse = await api.get<DiagnosisItem[]>(`/diagnosis/${diagnosisId}`)
 			diagnosisByProjectId.value[projectId] = {
 				...diagnosisByProjectId.value[projectId],
 				items: itemsResponse.data,

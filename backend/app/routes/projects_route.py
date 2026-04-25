@@ -4,6 +4,13 @@ from ..services.projects_service import (
     list_projects as list_projects_service,
     get_project as get_project_service,
     create_project as create_project_service,
+    update_project_prompt
+)
+
+from ..services.questions_service import (
+    generate_questions as generate_questions_service,
+    save_questions as save_questions_service,
+    parse_questions
 )
 
 bp = Blueprint("projects", __name__)
@@ -47,3 +54,29 @@ def create_project() -> Union[Response, Tuple[Response, int]]:
         return jsonify({"error": "Failed to create project"}), 500
 
     return jsonify(project), 201
+
+@bp.route("/projects/<int:project_id>/generate_questions", methods=["POST"])
+def generate_questions_route(project_id):
+    data = request.get_json()
+
+    text = data.get("text")
+
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+
+    try:
+        result = generate_questions_service(text)
+
+        # parse to list of typed dict class Question
+        parsed_questions = parse_questions(result)
+
+        save_questions_service(project_id, parsed_questions)
+
+        update_project_prompt(project_id, text)
+
+        return jsonify({
+            "questions": parsed_questions
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
