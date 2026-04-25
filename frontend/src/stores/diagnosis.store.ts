@@ -93,8 +93,10 @@ export const useDiagnosisStore = defineStore('diagnosis', () => {
 		}
 	}
 
-	async function pollDiagnosisStatus(diagnosisId: number): Promise<'IN_PROGRESS' | 'FINISHED' | 'FAILED'> {
-		const response = await api.get<{ status: 'IN_PROGRESS' | 'FINISHED' | 'FAILED' }>(`/diagnosis/${diagnosisId}/status`)
+	type DiagnosisStatus = 'IN_PROGRESS' | 'FINISHED' | 'FAILED'
+
+	async function pollDiagnosisStatus(diagnosisId: number): Promise<DiagnosisStatus> {
+		const response = await api.get<{ status: DiagnosisStatus }>(`/diagnosis/${diagnosisId}/status`)
 		return response.data.status
 	}
 
