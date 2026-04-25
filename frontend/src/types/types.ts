@@ -33,10 +33,15 @@ export interface QuestionWithAnswer extends Question {
   answer: Answer | null;
 }
 
+export type DiagnosisItemProbability = 'LOW' | 'MEDIUM' | 'HIGH';
+export type DiagnosisCareType = 'SELF_CARE' | 'PROFESSIONAL_CARE' | 'EMERGENCY_CARE';
+
 export interface DiagnosisItem {
   id: number;
   diagnosisId: number;
   title: string;
+  probability: DiagnosisItemProbability;
+  careType: DiagnosisCareType;
   motivation: string;
   recommendations: string;
 }
