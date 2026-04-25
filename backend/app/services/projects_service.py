@@ -67,3 +67,19 @@ def list_projects() -> List[Project]:
     except PsycopgError as e:
         print(f"Database error: {e}")
         return []
+
+def update_project_prompt(project_id: int, text: str) -> None:
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			cur.execute(
+				"""
+				UPDATE projects
+				SET initial_prompt = %s
+				WHERE id = %s;
+				""",
+				(text, project_id)
+			)
+
+	except PsycopgError as e:
+		print(f"Database error: {e}")

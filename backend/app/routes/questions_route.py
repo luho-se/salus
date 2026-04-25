@@ -6,13 +6,19 @@ from ..services.questions_service import (
     save_questions as save_questions_service,
     get_questions as get_questions_service,
     save_answers as save_answers_service,
-    get_answers as get_answers_service
+    get_answers as get_answers_service,
+    parse_questions
 )
+
+from ..services.projects_service import (
+    update_project_prompt
+)
+
 
 bp = Blueprint("questions", __name__)
 
-@bp.route("/questions/generate", methods=["POST"])
-def generate_questions():
+@bp.route("/questions/generate/<int:project_id>", methods=["POST"])
+def generate_questions_route(project_id):
     data = request.get_json()
 
     text = data.get("text")
@@ -21,8 +27,22 @@ def generate_questions():
         return jsonify({"error": "text is required"}), 400
 
     try:
+        # 1. generate AI output
         result = generate_questions_service(text)
-        return jsonify(result), 200
+
+        # 2. parse to structured typed dict
+        parsed_questions = parse_questions(result)
+
+        # 3. save questions
+        save_questions_service(project_id, parsed_questions)
+
+        # 4. update project prompt
+        update_project_prompt(project_id, text)
+
+        return jsonify({
+            "questions": parsed_questions
+        }), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
