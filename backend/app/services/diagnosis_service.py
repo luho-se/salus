@@ -21,7 +21,7 @@ def load_prompt():
 	return PROMPT_PATH.read_text()
 
 class DiagnosisJobStatus(str, Enum):
-	RUNNING = "RUNNING"
+	RUNNING = "IN_PROGRESS"
 	COMPLETED = "FINISHED"
 	FAILED = "FAILED"
 
@@ -200,7 +200,7 @@ def get_diagnosis_status(diagnosis_id: int) -> Optional[DiagnosisJobStatus]:
 			   (diagnosis_id,)
 			)
 			row = cur.fetchone()
-			return cast(DiagnosisJobStatus, row["status"]) if row else None
+			return cast(DiagnosisJobStatus, row["job_status"]) if row else None
 	except PsycopgError as e:
 		print(f"Database error: {e}")
 		return None
