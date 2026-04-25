@@ -83,6 +83,23 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 	PROFESSIONAL_CARE: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
 	EMERGENCY_CARE: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 }
+
+function parseWeightAnswer(xml: string): { question: string; answer: string } {
+	const q = xml.match(/<Question>([\s\S]*?)<\/Question>/)?.[1]?.trim() ?? xml
+	const a = xml.match(/<Answer>([\s\S]*?)<\/Answer>/)?.[1]?.trim() ?? ''
+	return { question: q, answer: a }
+}
+
+const sortedWeights = computed(() => {
+	if (!diagnosis.value?.sentenceWeights) return []
+	return [...diagnosis.value.sentenceWeights]
+		.filter((w) => w.sentenceWeight !== null)
+		.sort((a, b) => (b.sentenceWeight ?? 0) - (a.sentenceWeight ?? 0))
+})
+
+const maxWeight = computed(() =>
+	sortedWeights.value.reduce((m, w) => Math.max(m, Math.abs(w.sentenceWeight ?? 0)), 0),
+)
 </script>
 
 <template>
@@ -147,6 +164,37 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 						<div>
 							<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Recommendations</p>
 							<p class="text-sm">{{ item.recommendations }}</p>
+						</div>
+					</CardContent>
+				</Card>
+
+				<!-- Attribution scores -->
+				<Card v-if="sortedWeights.length">
+					<CardHeader>
+						<CardTitle class="text-base font-medium">Answer Importance</CardTitle>
+						<p class="text-xs text-muted-foreground">How much each answer influenced the diagnosis</p>
+					</CardHeader>
+					<CardContent class="flex flex-col gap-3">
+						<div v-for="w in sortedWeights" :key="w.id" class="flex flex-col gap-1">
+							<div class="flex items-baseline justify-between gap-2">
+								<div class="flex flex-col min-w-0">
+									<span class="text-xs font-medium text-muted-foreground truncate">
+										{{ parseWeightAnswer(w.answer).question }}
+									</span>
+									<span class="text-sm truncate">
+										{{ parseWeightAnswer(w.answer).answer }}
+									</span>
+								</div>
+								<span class="text-xs font-semibold tabular-nums shrink-0 text-muted-foreground">
+									{{ maxWeight > 0 ? Math.round((Math.abs(w.sentenceWeight ?? 0) / maxWeight) * 100) : 0 }}%
+								</span>
+							</div>
+							<div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+								<div
+									class="h-full rounded-full bg-primary transition-all"
+									:style="{ width: maxWeight > 0 ? `${(Math.abs(w.sentenceWeight ?? 0) / maxWeight) * 100}%` : '0%' }"
+								/>
+							</div>
 						</div>
 					</CardContent>
 				</Card>
