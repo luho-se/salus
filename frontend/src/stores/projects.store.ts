@@ -26,12 +26,12 @@ export const useProjectStore = defineStore('project', () => {
 			projectsById.value = Object.fromEntries(
 				response.data.map((i) => [i.id, i]),
 			)
+			return {success: true}
 		} catch (error) {
 			errorState.value = getErrorMessage(error, "Failed to load projects");
 			return {success: false}
 		} finally {
 			loading.value = false;
-			return {success: true};
 		}
 	}
 
@@ -44,12 +44,31 @@ export const useProjectStore = defineStore('project', () => {
 		try {
 			const response = await api.get<Project>(`/projects/${projectId}`);
 			projectsById.value[projectId] = response.data
+			return {success: true}
 		} catch (error) {
 			errorState.value = getErrorMessage(error, "Failed to load project");
 			return {success: false}
 		} finally {
 			loading.value = false;
-			return {success: true};
+		}
+	}
+
+	async function submitInitialPrompt(
+		projectId: number,
+		prompt: string,
+	): Promise<{ success: boolean }> {
+		loading.value = true;
+		errorState.value = "";
+
+		try {
+			const response = await api.patch<Project>(`/projects/${projectId}`, { initialPrompt: prompt })
+			projectsById.value[projectId] = response.data
+			return {success: true}
+		} catch (error) {
+			errorState.value = getErrorMessage(error, "Failed to submit prompt");
+			return {success: false}
+		} finally {
+			loading.value = false;
 		}
 	}
 
@@ -79,5 +98,6 @@ export const useProjectStore = defineStore('project', () => {
 		loadProjects,
 		loadProject,
 		createProject,
+		submitInitialPrompt,
 	}
 })
