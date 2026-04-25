@@ -29,6 +29,7 @@ class Answer(TypedDict):
     project_id: int
     question_id: int
     answer: Optional[str]
+    llm_generated: bool
     created_at: str
     updated_at: str
 
@@ -98,18 +99,19 @@ def generate_follow_up_questions(project_id: int) -> Dict[str, Any]:
 		raise ValueError("Invalid JSON from AI")
 
 
-def save_questions(project_id: int, questions: List[Question]) -> bool:
+def save_questions(project_id: int, questions: List[Question]) -> List[int]:
 	"""
 	Insert a list of questions into the database.
 
 	Returns:
-		True if successful, raises Exception otherwise.
+		List of inserted question IDs in the same order as input.
 	"""
 	if not questions:
-		return True 
+		return []
 
 	try:
 		db: Connection[dict[str, Any]] = get_db()
+		ids: List[int] = []
 		with db.cursor(row_factory=dict_row) as cur:
 			for q in questions:
 				question = q.get("question")
@@ -132,7 +134,8 @@ def save_questions(project_id: int, questions: List[Question]) -> bool:
 						input_min,
 						input_max
 					)
-					VALUES (%s, %s, %s, %s, %s, %s);
+					VALUES (%s, %s, %s, %s, %s, %s)
+					RETURNING id;
 					""",
 					(
 						project_id,
@@ -143,9 +146,11 @@ def save_questions(project_id: int, questions: List[Question]) -> bool:
 						input_max
 					)
 				)
+				row = cur.fetchone()
+				ids.append(row["id"])
 
 		db.commit()
-		return True
+		return ids
 
 	except Exception:
 		db.rollback()
@@ -182,6 +187,7 @@ def get_questions(project_id: int) -> List[Question]:
 def save_answers(project_id: int, answers: list[dict]) -> bool:
 	"""
 	Insert or update multiple answers for a project.
+	Each dict may include 'llm_generated' (bool, default False).
 
 	Returns:
 		True if successful, raises Exception otherwise.
@@ -193,6 +199,7 @@ def save_answers(project_id: int, answers: list[dict]) -> bool:
 			for a in answers:
 				question_id = a.get("question_id")
 				answer = a.get("answer")
+				llm_generated = bool(a.get("llm_generated", False))
 
 				if question_id is None:
 					raise ValueError("Missing question_id in answers payload")
@@ -202,15 +209,16 @@ def save_answers(project_id: int, answers: list[dict]) -> bool:
 					INSERT INTO answers (
 						project_id,
 						question_id,
-						answer
+						answer,
+						llm_generated
 					)
-					VALUES (%s, %s, %s)
+					VALUES (%s, %s, %s, %s)
 					ON CONFLICT (project_id, question_id)
 					DO UPDATE SET
 						answer = EXCLUDED.answer,
 						updated_at = CURRENT_TIMESTAMP;
 					""",
-					(project_id, question_id, answer)
+					(project_id, question_id, answer, llm_generated)
 				)
 
 		db.commit()
@@ -235,6 +243,7 @@ def get_answers(project_id: int) -> List[Answer]:
 				project_id,
 				question_id,
 				answer,
+				llm_generated,
 				created_at,
 				updated_at
 			FROM answers
