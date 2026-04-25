@@ -51,6 +51,15 @@ class DiagnosisSentenceWeight(TypedDict):
 
 
 def create_diagnosis(project_id: int) -> int:
+	"""
+	Creates a new diagnosis for the given project_id by executing the LLMShapService
+	to compute the diagnosis based on the initial prompt, questions and answers of the project.
+
+	Parameters:
+		project_id (int)
+	Returns:
+		int: The ID of the created diagnosis or None if an error occurs
+	"""
 	try:
 		# Construct the input for the LLMShapService
 		initial_prompt = db.get_project_initial_prompt(project_id)
@@ -95,6 +104,11 @@ def create_diagnosis(project_id: int) -> int:
 def get_diagnosis(diagnosis_id: int) -> Optional[Diagnosis]:
 	"""
 	Returns the diagnosis for the given diagnosis_id
+
+	Parameters:
+		diagnosis_id (int)
+	Returns:
+		Diagnosis or None if not found or on error
 	"""
 	try:
 		db: Connection[dict[str, Any]] = get_db()
@@ -116,6 +130,11 @@ def get_diagnosis(diagnosis_id: int) -> Optional[Diagnosis]:
 def get_latest_diagnosis(project_id: int) -> Optional[Diagnosis]:
 	"""
 	Returns the latest diagnosis for the given project_id
+
+	Parameters:
+		project_id (int)
+	Returns:
+		Diagnosis or None if not found or on error
 	"""
 	try:
 		db: Connection[dict[str, Any]] = get_db()
@@ -136,10 +155,15 @@ def get_latest_diagnosis(project_id: int) -> Optional[Diagnosis]:
 		return None
 
 
-def get_diagnosis_list(project_id: int) -> list[Diagnosis]:
+def get_diagnosis_list(project_id: int) -> Optional[list[Diagnosis]]:
 	"""
 	Returns a list of diagnosis ids for the given project_id,
 	ordered by created_at in descending order.
+
+	Parameters:
+		project_id (int)
+	Returns:
+		list[Diagnosis] or None if not found or on error
 	"""
 	try:
 		db: Connection[dict[str, Any]] = get_db()
@@ -148,6 +172,7 @@ def get_diagnosis_list(project_id: int) -> list[Diagnosis]:
 				"""
 				SELECT * FROM diagnosis 
 				WHERE project_id = %s
+				ORDER BY created_at DESC;
 				""",
 			   (project_id,)
 			)
@@ -161,6 +186,10 @@ def get_diagnosis_list(project_id: int) -> list[Diagnosis]:
 def get_diagnosis_items(diagnosis_id: int) -> Optional[list[DiagnosisItem]]:
 	"""
 	Returns a list of diagnosis items for the given diagnosis_id
+	Parameters:
+		diagnosis_id (int)
+	Returns:
+		list of DiagnosisItem or None if not found or on error
 	"""
 	try:
 		db: Connection[dict[str, Any]] = get_db()
