@@ -38,7 +38,7 @@ const handleSidebarClick = (e: MouseEvent) => {
 <template>
 	<Sidebar class="select-none" collapsible="icon" @click="handleSidebarClick">
 		<SidebarHeader class="">
-			<RouterLink to="/" as-child>
+			<RouterLink to="/home" as-child>
 				<div class="text-center text-5xl font-title py-4">
 					<div class="logo-main" :class="{ collapsed: state === 'collapsed' }">
 						<span class="p-0 m-0 tracking-[-0.575rem]">
