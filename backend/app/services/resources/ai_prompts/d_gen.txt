@@ -45,7 +45,7 @@ Schema:
 "likelihood": "high" | "medium" | "low",
 "motivation": "string",
 "recommendations": "string",
-"seek_care": "self_care" | "professional_care" | "emergency"
+"care_type": "self_care" | "professional_care" | "emergency"
 }
 ]
 }
@@ -68,7 +68,7 @@ Schema:
 - "recommendations":
   Clear next steps, including self-care vs professional care and type of provider
 
-- "seek_care":
+- "care_type":
   Required level of care:
 
   - "self_care" → self-care likely sufficient
@@ -83,7 +83,7 @@ Schema:
 - Do NOT include null values
 - Do NOT include additional fields outside the schema
 
-## Examples
+## Examples Output
 
 ### Example 1
 
