@@ -3,6 +3,7 @@
 from flask import Blueprint, request, jsonify
 from ..services.questions_service import (
     generate_questions as generate_questions_service,
+    generate_follow_up_questions as generate_follow_up_questions_service,
     save_questions as save_questions_service,
     get_questions as get_questions_service,
     save_answers as save_answers_service,
@@ -54,5 +55,22 @@ def save_additional_info(project_id):
     try:
         save_additional_info_service(project_id, answer)
         return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/questions/<int:project_id>/follow_up", methods=["POST"])
+def generate_follow_up_questions(project_id):
+    try:
+        result = generate_follow_up_questions_service(project_id)
+        needs_more = result.get("needs_more_questions", False)
+        new_questions = []
+        if needs_more and result.get("questions"):
+            save_questions_service(project_id, result["questions"])
+            new_questions = get_questions_service(project_id)
+        return jsonify({
+            "needs_more_questions": needs_more,
+            "questions": new_questions,
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
