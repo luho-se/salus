@@ -1,14 +1,28 @@
 <script setup lang="ts">
+import CreateProjectForm, { CreateProjectValues } from '@/components/CreateProjectForm.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { FolderPlus, Plus } from 'lucide-vue-next';
+import { ref } from 'vue';
+import { toast } from 'vue-sonner';
 
 
+const dialogRef = ref()
 
+function trigger() {
+	dialogRef.value.toggleDialog()
+}
+
+const handleNewProject = (values: CreateProjectValues) => {
+	console.log("Form submitted!", values)
+	trigger();
+	// todo trigger call to backend, get new project id then navigate to correct project
+}
 
 </script>
 
 <template>
+	<CreateProjectForm ref="dialogRef" @submit="handleNewProject" />
 	<div class="flex flex-col gap-10 grow p-10 h-full overflow-hidden max-h-screen">
 		<div class="flex flex-row justify-between">
 			<div class="flex flex-col">
@@ -16,7 +30,7 @@ import { FolderPlus, Plus } from 'lucide-vue-next';
 				<div class="text-muted-foreground">3 active - last updated 2 hours ago</div>
 			</div>
 			<div>
-				<Button size="lg" class="hover:cursor-pointer">
+				<Button size="lg" class="hover:cursor-pointer" @click="trigger">
 					<Plus /> New project
 				</Button>
 			</div>
@@ -47,7 +61,7 @@ import { FolderPlus, Plus } from 'lucide-vue-next';
 					<CardDescription class="text-center">Describe your situation and we'll guide the analysis
 					</CardDescription>
 					<CardContent class="flex flex-row justify-center pt-5">
-						<Button size="lg" class="hover:cursor-pointer">
+						<Button size="lg" class="hover:cursor-pointer" @click="trigger">
 							<Plus /> Create project
 						</Button>
 					</CardContent>
