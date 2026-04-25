@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useQuestionStore } from '@/stores/questions.store'
 import { QuestionWithAnswer } from '@/types/types'
-import { Pencil, Check, X } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Pencil, Check, X, AlertCircle } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -28,9 +28,8 @@ const additionalInfo = ref('')
 const editingId = ref<number | null>(null)
 const editValue = ref('')
 
-const diagnosisStatus = ref<'IDLE' | 'IN_PROGRESS' | 'FINISHED' | 'FAILED'>('IDLE')
-const diagnosisId = ref<number | null>(null)
-let pollInterval: ReturnType<typeof setInterval> | null = null
+const followUpRecommended = ref<boolean | null>(null)
+const generatingFollowUp = ref(false)
 
 const latestDiagnosis = computed(() => {
 	const list = diagnosisStore.getDiagnosisListByProjectId(projectId)
@@ -38,7 +37,6 @@ const latestDiagnosis = computed(() => {
 })
 
 const canStartDiagnosis = computed(() => {
-	if (diagnosisStatus.value === 'IN_PROGRESS') return false
 	const answeredQs = allQuestions.value.filter((q) => q.answer?.answer != null)
 	if (answeredQs.length === 0) return false
 	if (!latestDiagnosis.value) return true
@@ -54,10 +52,6 @@ onMounted(async () => {
 	if (additionalInfoQuestion.value?.answer?.answer) {
 		additionalInfo.value = additionalInfoQuestion.value.answer.answer
 	}
-})
-
-onUnmounted(() => {
-	if (pollInterval) clearInterval(pollInterval)
 })
 
 function startEdit(q: QuestionWithAnswer) {
@@ -81,39 +75,27 @@ async function saveEdit(q: QuestionWithAnswer) {
 	editingId.value = null
 }
 
+async function handleGenerateFollowUp() {
+	generatingFollowUp.value = true
+	const result = await questionStore.generateFollowUpQuestions(projectId)
+	generatingFollowUp.value = false
+	if (!result.success) {
+		toast.error(questionStore.errorState || 'Failed to generate follow-up questions')
+		return
+	}
+	followUpRecommended.value = result.needsMoreQuestions ?? false
+}
+
 async function handleStartDiagnosis() {
 	if (additionalInfo.value.trim()) {
 		await questionStore.saveAdditionalInfo(projectId, additionalInfo.value.trim())
 	}
-
 	const result = await diagnosisStore.startDiagnosis(projectId)
 	if (!result.success) {
 		toast.error(diagnosisStore.errorState || 'Failed to start diagnosis')
 		return
 	}
-
-	diagnosisId.value = result.diagnosisId!
-	diagnosisStatus.value = 'IN_PROGRESS'
-
-	pollInterval = setInterval(async () => {
-		try {
-			const status = await diagnosisStore.pollDiagnosisStatus(diagnosisId.value!)
-			diagnosisStatus.value = status
-			if (status === 'FINISHED') {
-				clearInterval(pollInterval!)
-				await diagnosisStore.fetchDiagnosisList(projectId)
-				router.push(`/project/${projectId}/diagnosis/${diagnosisId.value}`)
-			} else if (status === 'FAILED') {
-				clearInterval(pollInterval!)
-				diagnosisStatus.value = 'FAILED'
-				toast.error('Diagnosis failed. Please try again.')
-			}
-		} catch (e) {
-			clearInterval(pollInterval!)
-			diagnosisStatus.value = 'FAILED'
-			toast.error('Lost contact with the diagnosis service. Please try again.')
-		}
-	}, 3000)
+	router.push(`/project/${projectId}/diagnosis/${result.diagnosisId}`)
 }
 </script>
 
@@ -123,7 +105,7 @@ async function handleStartDiagnosis() {
 		<div class="flex items-center justify-between">
 			<h1 class="text-3xl font-semibold text-secondary-foreground">Your answers</h1>
 			<Button variant="outline" class="hover:cursor-pointer"
-				@click="router.push(`/project/${projectId}/questions`)">
+				@click="router.push(`/project/${projectId}/questions?edit=true`)">
 				Edit all
 			</Button>
 		</div>
@@ -131,14 +113,6 @@ async function handleStartDiagnosis() {
 		<!-- Loading -->
 		<template v-if="questionStore.loading && !questions.length">
 			<p class="text-muted-foreground">Loading...</p>
-		</template>
-
-		<!-- Diagnosis in progress -->
-		<template v-else-if="diagnosisStatus === 'IN_PROGRESS'">
-			<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
-				<div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-				<p>Running diagnosis — this may take a moment…</p>
-			</div>
 		</template>
 
 		<template v-else>
@@ -194,8 +168,35 @@ async function handleStartDiagnosis() {
 				</Card>
 			</div>
 
-			<!-- Start Diagnosis -->
-			<div class="flex justify-end pt-2">
+			<!-- Follow-up recommendation banner -->
+			<div v-if="followUpRecommended === true"
+				class="flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+				<div class="flex items-start gap-3">
+					<AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+					<p>The AI recommends answering more targeted questions to improve diagnosis accuracy. Follow-up questions have been added.</p>
+				</div>
+				<button class="shrink-0 underline underline-offset-2 hover:opacity-75 whitespace-nowrap"
+					@click="router.push(`/project/${projectId}/questions`)">
+					Go to questions
+				</button>
+			</div>
+			<div v-else-if="followUpRecommended === false"
+				class="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+				<Check class="mt-0.5 h-4 w-4 shrink-0" />
+				<p>The AI determined that your current answers are sufficient for a reliable diagnosis.</p>
+			</div>
+
+			<!-- Actions -->
+			<div class="flex justify-between items-center pt-2">
+				<Button variant="outline" :disabled="generatingFollowUp || diagnosisStatus === 'IN_PROGRESS'" class="hover:cursor-pointer" @click="handleGenerateFollowUp">
+					<template v-if="generatingFollowUp">
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+						Checking…
+					</template>
+					<template v-else>
+						Generate follow-up questions
+					</template>
+				</Button>
 				<Button :disabled="!canStartDiagnosis || diagnosisStore.loading" class="hover:cursor-pointer" @click="handleStartDiagnosis">
 					Start Diagnosis
 				</Button>

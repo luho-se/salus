@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { DiagnosisCareType, DiagnosisItemProbability } from '@/types/types'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -15,12 +15,50 @@ const projectId = Number(route.params.id)
 const diagnosisId = Number(route.params.diagnosisId)
 const diagnosis = computed(() => diagnosisStore.getDiagnosisByDiagnosisId(diagnosisId))
 
+type JobStatus = 'IN_PROGRESS' | 'FINISHED' | 'FAILED'
+const jobStatus = ref<JobStatus | null>(null)
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
 onMounted(async () => {
+	try {
+		const status = await diagnosisStore.pollDiagnosisStatus(diagnosisId)
+		jobStatus.value = status
+		if (status === 'IN_PROGRESS') {
+			startPolling()
+		} else {
+			await loadDiagnosis()
+		}
+	} catch {
+		// No status record (older diagnosis) — try loading directly
+		await loadDiagnosis()
+	}
+})
+
+onUnmounted(() => {
+	if (pollInterval) clearInterval(pollInterval)
+})
+
+function startPolling() {
+	pollInterval = setInterval(async () => {
+		try {
+			const status = await diagnosisStore.pollDiagnosisStatus(diagnosisId)
+			jobStatus.value = status
+			if (status !== 'IN_PROGRESS') {
+				clearInterval(pollInterval!)
+				if (status === 'FINISHED') await loadDiagnosis()
+			}
+		} catch {
+			clearInterval(pollInterval!)
+		}
+	}, 3000)
+}
+
+async function loadDiagnosis() {
 	const result = await diagnosisStore.loadDiagnosisByDiagnosisId(diagnosisId)
 	if (!result.success) {
 		toast.error(diagnosisStore.errorState || 'Failed to load diagnosis')
 	}
-})
+}
 
 const probabilityLabel: Record<DiagnosisItemProbability, string> = {
 	LOW: 'Low probability',
@@ -56,11 +94,29 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 			</Button>
 		</div>
 
-		<!-- Loading -->
-		<template v-if="diagnosisStore.loading">
+		<!-- Job running -->
+		<template v-if="jobStatus === 'IN_PROGRESS'">
+			<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+				<div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+				<p>Generating diagnosis — this may take a moment…</p>
+			</div>
+		</template>
+
+		<!-- Fetching results from DB -->
+		<template v-else-if="diagnosisStore.loading">
 			<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
 				<div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
 				<p>Loading diagnosis…</p>
+			</div>
+		</template>
+
+		<!-- Job failed -->
+		<template v-else-if="jobStatus === 'FAILED'">
+			<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+				<p class="text-destructive">Diagnosis failed. Please go back and try again.</p>
+				<Button variant="outline" @click="router.push(`/project/${projectId}/summary`)">
+					Back to summary
+				</Button>
 			</div>
 		</template>
 
@@ -97,7 +153,7 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 			</div>
 		</template>
 
-		<template v-else-if="!diagnosisStore.loading">
+		<template v-else>
 			<p class="text-muted-foreground">Diagnosis not found.</p>
 		</template>
 	</div>

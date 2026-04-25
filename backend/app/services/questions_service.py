@@ -38,7 +38,7 @@ def load_prompt(filename: str) -> str:
 
 def generate_questions(text: str) -> Dict[str, Any]:
 
-	system_prompt = load_prompt()
+	system_prompt = load_prompt("q_gen.txt")
 	user_input = f"""Description: {text}"""
 	
 	response = client.chat.completions.create(

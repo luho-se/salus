@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from './ui/sidebar';
-import { FolderOpen, LayoutGrid } from 'lucide-vue-next';
+import { FolderOpen, Folder, LayoutGrid } from 'lucide-vue-next';
 import { useProjectStore } from '@/stores/projects.store';
 import { computed, onMounted } from 'vue';
 
 const router = useRouter()
+const route = useRoute()
 const projectStore = useProjectStore()
+
+const currentProjectId = computed(() => {
+	const id = Number(route.params.id)
+	return isNaN(id) ? null : id
+})
 
 onMounted(() => {
 	if (!projectStore.projects.length) projectStore.loadProjects()
@@ -69,9 +75,10 @@ const handleSidebarClick = (e: MouseEvent) => {
 					<SidebarMenu>
 						<SidebarMenuItem v-for="project in recentProjects" :key="project.id">
 							<RouterLink :to="{ name: 'project', params: { id: project.id } }" as-child>
-								<SidebarMenuButton as-child class="cursor-pointer">
+								<SidebarMenuButton as-child :isActive="project.id === currentProjectId" class="cursor-pointer">
 									<div>
-										<FolderOpen />
+										<FolderOpen v-if="project.id === currentProjectId" />
+										<Folder v-else />
 										<span>{{ project.title }}</span>
 									</div>
 								</SidebarMenuButton>
