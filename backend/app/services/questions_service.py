@@ -3,6 +3,7 @@ from typing import List, Optional, TypedDict
 from openai import OpenAI
 import json
 from pathlib import Path
+from flask import g
 
 client = OpenAI()
 
@@ -57,63 +58,68 @@ Symptom Categories:
 		raise ValueError("Invalid JSON from AI")
 	
 
-def save_questions(project_id: int, questions: list[dict], conn) -> bool:
-    """
-    Insert a list of questions into the database.
 
-    Returns:
-        True if successful, raises Exception otherwise.
-    """
+def save_questions(project_id, questions) -> bool:
+	"""
+	Insert a list of questions into the database.
 
-    if not questions:
-        return True  # nothing to do, but still successful
+	Returns:
+		True if successful, raises Exception otherwise.
+	"""
+	conn = g.db
 
-    try:
-        with conn.cursor() as cur:
-            for q in questions:
-                question = q.get("question")
-                input_type = q.get("input_type")
 
-                if not question or not input_type:
-                    raise ValueError("Missing required fields in question")
+	if not questions:
+		return True 
 
-                input_unit = q.get("input_unit")
-                input_min = q.get("input_min")
-                input_max = q.get("input_max")
+	try:
+		with conn.cursor() as cur:
+			for q in questions:
+				question = q.get("question")
+				input_type = q.get("input_type")
 
-                cur.execute(
-                    """
-                    INSERT INTO questions (
-                        project_id,
-                        question,
-                        input_type,
-                        input_unit,
-                        input_min,
-                        input_max
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s);
-                    """,
-                    (
-                        project_id,
-                        question,
-                        input_type,
-                        input_unit,
-                        input_min,
-                        input_max
-                    )
-                )
+				if not question or not input_type:
+					raise ValueError("Missing required fields in question")
 
-        conn.commit()
-        return True
+				input_unit = q.get("input_unit")
+				input_min = q.get("input_min")
+				input_max = q.get("input_max")
 
-    except Exception:
-        conn.rollback()
-        raise
+				cur.execute(
+					"""
+					INSERT INTO questions (
+						project_id,
+						question,
+						input_type,
+						input_unit,
+						input_min,
+						input_max
+					)
+					VALUES (%s, %s, %s, %s, %s, %s);
+					""",
+					(
+						project_id,
+						question,
+						input_type,
+						input_unit,
+						input_min,
+						input_max
+					)
+				)
 
-def get_questions(project_id: int, conn) -> List[Question]:
+		conn.commit()
+		return True
+
+	except Exception:
+		conn.rollback()
+		raise
+
+def get_questions(project_id: int) -> List[Question]:
 	"""
 	Retrive a list of questions from the database.
 	"""
+	conn = g.db
+
 	with conn.cursor() as cur:
 		cur.execute(
 			"""
@@ -151,7 +157,7 @@ def get_questions(project_id: int, conn) -> List[Question]:
 
 	return questions
 
-def save_answers(project_id: int, answers: list[dict], conn) -> bool:
+def save_answers(project_id: int, answers: list[dict]) -> bool:
 	"""
 	Insert or update multiple answers for a project.
 
@@ -159,6 +165,7 @@ def save_answers(project_id: int, answers: list[dict], conn) -> bool:
 		True if successful, raises Exception otherwise.
 	"""
 
+	conn = g.db
 	try:
 		with conn.cursor() as cur:
 			for a in answers:
@@ -192,11 +199,12 @@ def save_answers(project_id: int, answers: list[dict], conn) -> bool:
 		raise
 
 
-def get_answers(project_id: int, conn) -> List[Answer]:
+def get_answers(project_id: int) -> List[Answer]:
 	"""
 	Retrieve all answers for a project.
 	"""
 
+	conn = g.db
 	with conn.cursor() as cur:
 		cur.execute(
 			"""
