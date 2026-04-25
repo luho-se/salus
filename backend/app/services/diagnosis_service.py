@@ -1,8 +1,9 @@
 from typing import cast, Optional, Any, TypedDict
 from enum import Enum
+import json
 
 from backend.app.services.projects_service import Project
-from backend.app.services.projects_service import ProjectStep
+from backend.app.services.projects_service import get_project
 from backend.app.services.questions_service import get_questions
 from backend.app.services.questions_service import get_answers
 from backend.app.services.questions_service import Question
@@ -81,7 +82,10 @@ def create_diagnosis(project_id: int) -> int:
 			return f"<Question>{question}</Question><Answer>{answer}</Answer>"
 
 		# Construct the input for the LLMShapService
-		initial_prompt = db.get_project_initial_prompt(project_id)
+		project = get_project(project_id)
+		if project is None:
+			raise ValueError("Project not found")
+		initial_prompt = project.get("initial_prompt")
 		if initial_prompt is None:
 			raise ValueError("Initial prompt for project not found")
 		questions: list[Question] = get_questions(project_id)
@@ -92,7 +96,6 @@ def create_diagnosis(project_id: int) -> int:
 		}
 
 		for q in questions:
-			# Find the corresponding answer for the question
 			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
 			if answer is None:
 				raise ValueError(f"No answer found for question ID {q['id']}")
@@ -103,10 +106,39 @@ def create_diagnosis(project_id: int) -> int:
 		llmshap_service = LLMShapService(config=config)
 		diagnosis, attribution = llmshap_service.compute_diagnosis(data)
 
-		# Parse the diagnosis_result.output and save it to the databas
 		print("Diagnosis result:", diagnosis)
 		print("Attribution:", attribution)
 
+		d_items: list[DiagnosisItem] = parse_diagnosis(diagnosis)
+		d_weights: list[DiagnosisSentenceWeight] = parse_attribution(attribution)
+
+		diagnosis_id = save_diagnosis(project_id)
+		save_diagnosis_items(diagnosis_id, d_items)
+		save_diagnosis_sentence_weights(diagnosis_id, d_weights)
+		return diagnosis_id
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		db.rollback() # type: ignore
+		return None
+
+def parse_diagnosis(diagnosis: dict) -> list[DiagnosisItem]:
+    data = json.loads(diagnosis)
+    return [DiagnosisItem(**item) for item in data["diagnosis"]]
+
+def parse_attribution(attribution: dict) -> Optional[list[DiagnosisSentenceWeight]]:
+	# Implementation for handling attribution
+	pass
+
+def save_diagnosis(project_id: int) -> int:
+	"""
+	Saves the diagnosis to the database
+
+	Parameters:
+		project_id (int)
+	Returns:
+		int: The ID of the saved diagnosis or None if an error occurs
+	"""
+	try:
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
 			cur.execute(
@@ -122,9 +154,64 @@ def create_diagnosis(project_id: int) -> int:
 		return cast(int, row["id"]) if row else None
 	except PsycopgError as e:
 		print(f"Database error: {e}")
-		db.rollback() # type: ignore
+		db.rollback()
 		return None
 
+def save_diagnosis_items(diagnosis_id: int, items: list[DiagnosisItem]) -> bool:
+	"""
+	Saves the diagnosis items to the database for the given diagnosis_id
+
+	Parameters:
+		diagnosis_id (int)
+		items (list[DiagnosisItem])
+	Returns:
+		bool: True if successful, False otherwise
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			for item in items:
+				cur.execute(
+					"""
+					INSERT INTO diagnosis_item (diagnosis_id, title, probability, care_type, motivation, recommendations)
+					VALUES (%s, %s, %s, %s, %s, %s);
+					""",
+					(diagnosis_id, item["title"], item["probability"], item["care_type"], item["motivation"], item["recommendations"])
+				)
+		db.commit()
+		return True
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		db.rollback()
+		return False
+	
+def save_diagnosis_sentence_weights(diagnosis_id: int, weights: list[DiagnosisSentenceWeight]) -> bool:
+	"""
+	Saves the diagnosis sentence weights to the database for the given diagnosis_id
+
+	Parameters:
+		diagnosis_id (int)
+		weights (list[DiagnosisSentenceWeight])
+	Returns:
+		bool: True if successful, False otherwise
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			for weight in weights:
+				cur.execute(
+					"""
+					INSERT INTO diagnosis_sentence_weight (diagnosis_id, sentence, weight)
+					VALUES (%s, %s, %s);
+					""",
+					(diagnosis_id, weight["sentence"], weight["weight"])
+				)
+		db.commit()
+		return True
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		db.rollback()
+		return False
 
 def get_diagnosis(diagnosis_id: int) -> Optional[Diagnosis]:
 	"""
@@ -221,7 +308,7 @@ def get_diagnosis_items(diagnosis_id: int) -> Optional[list[DiagnosisItem]]:
 		with db.cursor(row_factory=dict_row) as cur:
 			cur.execute(
 				"""
-				SELECT * FROM diagnosis_items 
+				SELECT * FROM diagnosis_item 
 				WHERE diagnosis_id = %s;
 				""",
 			   (diagnosis_id,)
@@ -246,7 +333,7 @@ def get_diagnosis_sentence_weights(diagnosis_id: int) -> Optional[list[Diagnosis
 		with db.cursor(row_factory=dict_row) as cur:
 			cur.execute(
 				"""
-				SELECT * FROM diagnosis_sentence_weights 
+				SELECT * FROM diagnosis_sentence_weight
 				WHERE diagnosis_id = %s;
 				""",
 			   (diagnosis_id,)
