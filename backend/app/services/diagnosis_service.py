@@ -2,20 +2,19 @@ from typing import cast, Optional, Any, TypedDict
 from enum import Enum
 import json
 
-from backend.app.services.projects_service import Project
-from backend.app.services.projects_service import get_project
-from backend.app.services.questions_service import get_questions
-from backend.app.services.questions_service import get_answers
-from backend.app.services.questions_service import Question
-from backend.app.services.questions_service import Answer
-from backend.app.modules.xai_module.llmshap_service import LLMShapService
-from backend.app.modules.xai_module.llmshap_config import LLMShapConfig
+from .projects_service import get_project
+from .questions_service import get_questions
+from .questions_service import get_answers
+from .questions_service import Question
+from .questions_service import Answer
+from ..modules.xai_module.llmshap_service import LLMShapService
+from ..modules.xai_module.llmshap_config import LLMShapConfig
 from ..db import get_db
 from psycopg.rows import dict_row
 from psycopg import Connection, Error as PsycopgError
 from pathlib import Path
 
-from backend.app import db
+from .. import db
 
 PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts" / "d_gen.txt"
 
