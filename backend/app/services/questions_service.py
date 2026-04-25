@@ -212,6 +212,47 @@ def get_answers(project_id: int) -> List[Answer]:
 
 
 
+def save_additional_info(project_id: int, answer: str) -> None:
+	"""
+	Upserts an 'Additional information' question for the project (if it doesn't exist)
+	and saves/updates its answer.
+	"""
+	db: Connection[dict[str, Any]] = get_db()
+	with db.cursor(row_factory=dict_row) as cur:
+		cur.execute(
+			"""
+			SELECT id FROM questions
+			WHERE project_id = %s AND question = 'Additional information'
+			LIMIT 1;
+			""",
+			(project_id,)
+		)
+		row = cur.fetchone()
+		if row:
+			question_id = row["id"]
+		else:
+			cur.execute(
+				"""
+				INSERT INTO questions (project_id, question, input_type)
+				VALUES (%s, 'Additional information', 'text')
+				RETURNING id;
+				""",
+				(project_id,)
+			)
+			question_id = cur.fetchone()["id"]
+
+		cur.execute(
+			"""
+			INSERT INTO answers (project_id, question_id, answer)
+			VALUES (%s, %s, %s)
+			ON CONFLICT (project_id, question_id)
+			DO UPDATE SET answer = EXCLUDED.answer, updated_at = CURRENT_TIMESTAMP;
+			""",
+			(project_id, question_id, answer)
+		)
+	db.commit()
+
+
 def parse_questions(data) -> List[Question]:
     questions = data.get("questions", [])
 
