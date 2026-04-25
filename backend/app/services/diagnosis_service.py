@@ -23,6 +23,10 @@ PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts" / "d_gen.txt"
 def load_prompt():
 	return PROMPT_PATH.read_text()
 
+class DiagnosisJobStatus(str, Enum):
+	RUNNING = "RUNNING"
+	COMPLETED = "FINISHED"
+	FAILED = "FAILED"
 
 class DiagnosisItemProbability(str, Enum):
 	LOW = "LOW"
@@ -66,13 +70,14 @@ class DiagnosisReturn(TypedDict):
 	diagnosis_weights: list[DiagnosisSentenceWeight]
 
 
-def create_diagnosis(project_id: int) -> int:
+def create_diagnosis(project_id: int, diagnosis_id: int) -> None:
 	"""
-	Creates a new diagnosis for the given project_id by executing the LLMShapService
+	Creates a new diagnosis for the given project_id and diagnosis_id by executing the LLMShapService
 	to compute the diagnosis based on the initial prompt, questions and answers of the project.
 
 	Parameters:
 		project_id (int)
+		diagnosis_id (int)
 	Returns:
 		int: The ID of the created diagnosis or None if an error occurs
 	"""
@@ -85,9 +90,11 @@ def create_diagnosis(project_id: int) -> int:
 		project = get_project(project_id)
 		if project is None:
 			raise ValueError("Project not found")
+		
 		initial_prompt = project.get("initial_prompt")
 		if initial_prompt is None:
 			raise ValueError("Initial prompt for project not found")
+		
 		questions: list[Question] = get_questions(project_id)
 		answers: list[Answer] = get_answers(project_id)
 
@@ -101,7 +108,6 @@ def create_diagnosis(project_id: int) -> int:
 				raise ValueError(f"No answer found for question ID {q['id']}")
 			data[f"q{q['id']}"] = construct_q_and_a_item(q["question"], answer["answer"])
 
-		# Execute the LLMShapService to compute the diagnosis
 		config = LLMShapConfig(system_instruction=load_prompt())
 		llmshap_service = LLMShapService(config=config)
 		diagnosis, attribution = llmshap_service.compute_diagnosis(data)
@@ -115,19 +121,103 @@ def create_diagnosis(project_id: int) -> int:
 		diagnosis_id = save_diagnosis(project_id)
 		save_diagnosis_items(diagnosis_id, d_items)
 		save_diagnosis_sentence_weights(diagnosis_id, d_weights)
-		return diagnosis_id
+		return
+	except Exception as e:
+		update_diagnosis_status(diagnosis_id, DiagnosisJobStatus.FAILED.value)
+		delete_diagnosis(diagnosis_id)
+		return
+
+def create_diagnosis_status(project_id: int, diagnosis_id: int) -> Optional[int]:
+	"""
+	Creates a new diagnosis status for the given project_id by inserting a new record into the diagnosis_job_status table
+	with status set to RUNNING. The actual diagnosis computation will be handled asynchronously by a background worker.
+
+	Parameters:
+		project_id (int)
+		diagnosis_id (int)
+	Returns:
+		Optional[int]: The ID of the created diagnosis job or None if an error occurs
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			cur.execute(
+				"""
+				INSERT INTO diagnosis_job_status (project_id, diagnosis_id, job_status)
+				VALUES (%s, %s, %s);
+				""",
+				(project_id, diagnosis_id, DiagnosisJobStatus.RUNNING.value)
+			)
+			row = cur.fetchone()
+		db.commit()
+		return cast(int, row["diagnosis_id"]) if row else None
 	except PsycopgError as e:
 		print(f"Database error: {e}")
-		db.rollback() # type: ignore
+		db.rollback()
 		return None
+	
+
+def update_diagnosis_status(diagnosis_id: int, new_status: DiagnosisJobStatus):
+	"""
+	Updates status of diagnosis
+
+	Parameters:
+		diagnosis_id (int)
+		new_status (DiagnosisJobStatus)
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			cur.execute(
+				"""
+				UPDATE diagnosis_job_status 
+				SET job_status = %s 
+				WHERE diagnosis_id = %s;
+				""",
+				(new_status.value, diagnosis_id)
+			)
+		db.commit()
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		db.rollback()
+		return None
+
+
+def get_diagnosis_status(diagnosis_id: int) -> Optional[DiagnosisJobStatus]:
+	"""
+	Returns the status of the diagnosis job for the given diagnosis_id
+
+	Parameters:
+		diagnosis_id (int)
+	Returns:
+		DiagnosisJobStatus or None if not found or on error
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			cur.execute(
+				"""
+				SELECT job_status FROM diagnosis_job_status
+				WHERE diagnosis_id = %s
+				""",
+			   (diagnosis_id,)
+			)
+			row = cur.fetchone()
+			return cast(DiagnosisJobStatus, row["status"]) if row else None
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		return None
+
 
 def parse_diagnosis(diagnosis: dict) -> list[DiagnosisItem]:
     data = json.loads(diagnosis)
     return [DiagnosisItem(**item) for item in data["diagnosis"]]
 
+
 def parse_attribution(attribution: dict) -> Optional[list[DiagnosisSentenceWeight]]:
 	# Implementation for handling attribution
 	pass
+
 
 def save_diagnosis(project_id: int) -> int:
 	"""
@@ -156,6 +246,33 @@ def save_diagnosis(project_id: int) -> int:
 		print(f"Database error: {e}")
 		db.rollback()
 		return None
+
+
+def delete_diagnosis(diagnosis_id: int) -> bool:
+	"""
+	Deletes the diagnosis from the database
+
+	Parameters:
+		diagnosis_id (int)
+	Returns:
+		bool: True if deleted, False if an error occurs
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor() as cur:
+			cur.execute(
+			"""
+			DELETE FROM diagnosis WHERE id = %s;
+			""",
+			(diagnosis_id,)
+			)
+			db.commit()
+			return True
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		db.rollback()
+		return False
+
 
 def save_diagnosis_items(diagnosis_id: int, items: list[DiagnosisItem]) -> bool:
 	"""

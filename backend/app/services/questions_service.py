@@ -40,7 +40,7 @@ def generate_questions(text: str):
 
 	system_prompt = load_prompt()
 	user_input = f"""Description: {text}"""
-
+	
 	response = client.chat.completions.create(
 		model="gpt-4o-mini",
 		messages=[

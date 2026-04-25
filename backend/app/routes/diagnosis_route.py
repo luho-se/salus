@@ -1,10 +1,14 @@
 from flask import Blueprint, jsonify, request, Response
+from typing import Optional
+import threading
 
-from ..services.diagnosis_service import create_diagnosis
+from ..services.diagnosis_service import DiagnosisJobStatus, create_diagnosis
 from ..services.diagnosis_service import get_diagnosis
 from ..services.diagnosis_service import get_diagnosis_items
 from ..services.diagnosis_service import get_diagnosis_list
 from ..services.diagnosis_service import get_diagnosis_sentence_weights
+from ..services.diagnosis_service import save_diagnosis
+from ..services.diagnosis_service import create_diagnosis_status
 from ..services.diagnosis_service import DiagnosisItem
 from ..services.diagnosis_service import Diagnosis
 from ..services.diagnosis_service import DiagnosisReturn
@@ -23,14 +27,36 @@ def generate_diagnosis(project_id: int):
 	Returns:
 		diagnosis_id (int)
 	"""
-	try: 
-		diagnosis_id: int = create_diagnosis(project_id)
+	try:
+
+		diagnosis_id: int = save_diagnosis(project_id)
 		if diagnosis_id is None:
-			return jsonify({"error": "Failed to create diagnosis"}), 500
-		return jsonify({"diagnosis_id": diagnosis_id}), 201
+			return jsonify({"error": "Failed during diagnosis initialization"}), 500
+		create_diagnosis_status(project_id, diagnosis_id)
+		thread=threading.Thread(target=create_diagnosis, args=(project_id, diagnosis_id), daemon=True)
+		return jsonify({"diagnosis_id": diagnosis_id}), 200
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
-	
+
+
+@bp.route("/diagnosis/<int:diagnosis_id>/status", methods=["GET"])
+def get_diagnosis_status(diagnosis_id: int):
+	"""
+	Returns the status of the diagnosis job for the given diagnosis_id
+	Parameters:
+		diagnosis_id (int)
+	Returns:
+		DiagnosisJobStatus or None if not found or on error
+	"""
+	try:
+		status: Optional[DiagnosisJobStatus] = get_diagnosis_status(diagnosis_id)
+		if status is None:
+			return jsonify({"error": "Diagnosis status not found"}), 404
+		return jsonify({"status": status.value}), 200
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
+
+
 @bp.route("/diagnosis/list/<int:project_id>/slim", methods=["GET"])
 def get_diagnosis_list_slim(project_id: int):
 	"""
