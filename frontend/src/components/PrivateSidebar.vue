@@ -31,40 +31,34 @@ const handleSidebarClick = (e: MouseEvent) => {
 	}
 };
 
+
+
 </script>
 
 <template>
-	<Sidebar class="font-lato select-none" collapsible="icon" @click="handleSidebarClick">
-		<SidebarHeader class="bg-light-gold-100">
+	<Sidebar class="select-none" collapsible="icon" @click="handleSidebarClick">
+		<SidebarHeader class="">
 			<RouterLink to="/" as-child>
-				<div class="logo-parent flex flex-row justify-center py-5 items-center gap-1">
+				<div class="text-center text-5xl font-title py-4">
 					<div class="logo-main" :class="{ collapsed: state === 'collapsed' }">
-						<span class="text-royal-gold-400 font-lato font-extrabold tracking-[-0.35rem]">
-							N
+						<span class="p-0 m-0 tracking-[-0.575rem]">
+							s
 						</span>
-						<span class="logo-sub text-royal-gold-400 font-lato font-extrabold tracking-tighter">
-							utri
-						</span>
-					</div>
-					<div class="logo-main" :class="{ collapsed: state === 'collapsed' }">
-						<span class=" text-golden-orange-400 font-lato font-extrabold tracking-[-0.35rem] italic">
-							P
-						</span>
-						<span class="logo-sub text-golden-orange-400 font-lato font-extrabold tracking-tighter italic">
-							e
+						<span class="logo-sub p-0 m-0">
+							alus
 						</span>
 					</div>
 				</div>
 			</RouterLink>
 		</SidebarHeader>
-		<SidebarContent class="bg-light-gold-100 overflow-x-hidden">
+		<SidebarContent class=" overflow-x-hidden">
 			<SidebarGroup>
 				<SidebarGroupLabel>Navigation</SidebarGroupLabel>
 				<SidebarGroupContent>
 					<SidebarMenu>
 						<SidebarMenuItem>
 							<RouterLink :to="{ name: 'home' }" as-child>
-								<SidebarMenuButton as-child class="hover:bg-light-gold-200 cursor-pointer">
+								<SidebarMenuButton as-child class=" cursor-pointer">
 									<div>
 										<LayoutGrid />
 										<span>All projects</span>
@@ -82,7 +76,7 @@ const handleSidebarClick = (e: MouseEvent) => {
 					<SidebarMenu>
 						<SidebarMenuItem v-for="item in menuItems" :key="item.title">
 							<RouterLink :to="{ name: 'project', params: { id: item.projectId } }" as-child>
-								<SidebarMenuButton as-child class="hover:bg-light-gold-200 cursor-pointer">
+								<SidebarMenuButton as-child class="cursor-pointer">
 									<div>
 										<component :is="item.icon" />
 										<span>{{ item.title }}</span>
@@ -107,15 +101,7 @@ const handleSidebarClick = (e: MouseEvent) => {
 }
 
 .logo-main.collapsed {
-	transform: scale(0.6);
-}
-
-.logo-main.collapsed:nth-of-type(1) {
-	transform: scale(0.6) translateX(60%);
-}
-
-.logo-main.collapsed:nth-of-type(2) {
-	transform: scale(0.6) translateX(-135%);
+	transform: translateX(17.5%);
 }
 
 .logo-sub {
