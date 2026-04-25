@@ -95,8 +95,7 @@ def create_diagnosis(project_id: int, diagnosis_id: int) -> None:
 		questions: list[Question] = get_questions(project_id)
 		answers: list[Answer] = get_answers(project_id)
 
-		data = {
-		}
+		data = {}
 
 		for q in questions:
 			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
