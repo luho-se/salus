@@ -302,7 +302,7 @@ def save_diagnosis_sentence_weights(diagnosis_id: int, attribution: dict, answer
 				answer_text = answer_map.get(question_id)
 				cur.execute(
 					"""
-					INSERT INTO diagnosis_sentence_weight (diagnosis_id, question_id, sentence, weight)
+					INSERT INTO diagnosis_sentence_weight (diagnosis_id, question_id, answer, sentence_weight)
 					VALUES (%s, %s, %s, %s);
 					""",
 					(diagnosis_id, question_id, answer_text, weight)
