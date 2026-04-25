@@ -4,6 +4,18 @@ CREATE TYPE project_step AS ENUM (
   'DIAGNOSIS'
 );
 
+CREATE TYPE diagnosis_item_probability AS ENUM (
+  'LOW',
+  'MEDIUM',
+  'HIGH'
+);
+
+CREATE TYPE diagnosis_care_type AS ENUM (
+  'SELF_CARE',
+  'PROFESSIONAL_CARE',
+  'EMERGENCY_CARE'
+);
+
 CREATE TABLE IF NOT EXISTS projects (
   id SERIAL PRIMARY KEY,
   title TEXT NOT NULL,
@@ -48,6 +60,8 @@ CREATE TABLE IF NOT EXISTS diagnosis_item (
 	id SERIAL PRIMARY KEY,
 	diagnosis_id INT NOT NULL,
 	title TEXT NOT NULL,
+	probability diagnosis_item_probability NOT NULL,
+	care_type diagnosis_care_type NOT NULL,
 	motivation TEXT NOT NULL,
 	recommendations TEXT NOT NULL,
     FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE
