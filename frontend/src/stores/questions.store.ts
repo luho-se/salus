@@ -20,14 +20,14 @@ export const useQuestionStore = defineStore('question', () => {
 		errorState.value = ''
 
 		try {
-			const response = await api.get<QuestionWithAnswer[]>(`/projects/${projectId}/questions`)
+			const response = await api.get<QuestionWithAnswer[]>(`/questions/${projectId}`)
 			questionsByProjectId.value[projectId] = response.data
+			return { success: true }
 		} catch (error) {
 			errorState.value = getErrorMessage(error, 'Failed to load questions')
 			return { success: false }
 		} finally {
 			loading.value = false
-			return { success: true }
 		}
 	}
 
@@ -37,19 +37,17 @@ export const useQuestionStore = defineStore('question', () => {
 	): Promise<{ success: boolean }> {
 		loading.value = true
 		errorState.value = ''
-
+		// @todo use generate questions endpoint
 		try {
-			const response = await api.post<QuestionWithAnswer[]>(
-				`/projects/${projectId}/answers`,
-				{ answers },
-			)
-			questionsByProjectId.value[projectId] = response.data
+			await api.post(`/answers/${projectId}`, { answers })
+			// Re-fetch to get updated answer state
+			await loadQuestions(projectId)
+			return { success: true }
 		} catch (error) {
 			errorState.value = getErrorMessage(error, 'Failed to submit answers')
 			return { success: false }
 		} finally {
 			loading.value = false
-			return { success: true }
 		}
 	}
 
