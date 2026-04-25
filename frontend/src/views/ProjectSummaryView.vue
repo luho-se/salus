@@ -5,7 +5,7 @@ import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useQuestionStore } from '@/stores/questions.store'
 import { QuestionWithAnswer } from '@/types/types'
 import { Pencil, Check, X, AlertCircle } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -28,10 +28,6 @@ const additionalInfo = ref('')
 const editingId = ref<number | null>(null)
 const editValue = ref('')
 
-const diagnosisStatus = ref<'IDLE' | 'IN_PROGRESS' | 'FINISHED' | 'FAILED'>('IDLE')
-const diagnosisId = ref<number | null>(null)
-let pollInterval: ReturnType<typeof setInterval> | null = null
-
 const followUpRecommended = ref<boolean | null>(null)
 const generatingFollowUp = ref(false)
 
@@ -41,7 +37,6 @@ const latestDiagnosis = computed(() => {
 })
 
 const canStartDiagnosis = computed(() => {
-	if (diagnosisStatus.value === 'IN_PROGRESS') return false
 	const answeredQs = allQuestions.value.filter((q) => q.answer?.answer != null)
 	if (answeredQs.length === 0) return false
 	if (!latestDiagnosis.value) return true
@@ -57,10 +52,6 @@ onMounted(async () => {
 	if (additionalInfoQuestion.value?.answer?.answer) {
 		additionalInfo.value = additionalInfoQuestion.value.answer.answer
 	}
-})
-
-onUnmounted(() => {
-	if (pollInterval) clearInterval(pollInterval)
 })
 
 function startEdit(q: QuestionWithAnswer) {
@@ -99,35 +90,12 @@ async function handleStartDiagnosis() {
 	if (additionalInfo.value.trim()) {
 		await questionStore.saveAdditionalInfo(projectId, additionalInfo.value.trim())
 	}
-
 	const result = await diagnosisStore.startDiagnosis(projectId)
 	if (!result.success) {
 		toast.error(diagnosisStore.errorState || 'Failed to start diagnosis')
 		return
 	}
-
-	diagnosisId.value = result.diagnosisId!
-	diagnosisStatus.value = 'IN_PROGRESS'
-
-	pollInterval = setInterval(async () => {
-		try {
-			const status = await diagnosisStore.pollDiagnosisStatus(diagnosisId.value!)
-			diagnosisStatus.value = status
-			if (status === 'FINISHED') {
-				clearInterval(pollInterval!)
-				await diagnosisStore.fetchDiagnosisList(projectId)
-				router.push(`/project/${projectId}/diagnosis/${diagnosisId.value}`)
-			} else if (status === 'FAILED') {
-				clearInterval(pollInterval!)
-				diagnosisStatus.value = 'FAILED'
-				toast.error('Diagnosis failed. Please try again.')
-			}
-		} catch (e) {
-			clearInterval(pollInterval!)
-			diagnosisStatus.value = 'FAILED'
-			toast.error('Lost contact with the diagnosis service. Please try again.')
-		}
-	}, 3000)
+	router.push(`/project/${projectId}/diagnosis/${result.diagnosisId}`)
 }
 </script>
 
@@ -137,7 +105,7 @@ async function handleStartDiagnosis() {
 		<div class="flex items-center justify-between">
 			<h1 class="text-3xl font-semibold text-secondary-foreground">Your answers</h1>
 			<Button variant="outline" class="hover:cursor-pointer"
-				@click="router.push(`/project/${projectId}/questions`)">
+				@click="router.push(`/project/${projectId}/questions?edit=true`)">
 				Edit all
 			</Button>
 		</div>
@@ -145,14 +113,6 @@ async function handleStartDiagnosis() {
 		<!-- Loading -->
 		<template v-if="questionStore.loading && !questions.length">
 			<p class="text-muted-foreground">Loading...</p>
-		</template>
-
-		<!-- Diagnosis in progress -->
-		<template v-else-if="diagnosisStatus === 'IN_PROGRESS'">
-			<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
-				<div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-				<p>Running diagnosis — this may take a moment…</p>
-			</div>
 		</template>
 
 		<template v-else>
