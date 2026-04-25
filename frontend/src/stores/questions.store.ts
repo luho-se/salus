@@ -60,11 +60,16 @@ export const useQuestionStore = defineStore('question', () => {
 		}
 	}
 
+	function setQuestions(projectId: number, questions: Question[]): void {
+		questionsByProjectId.value[projectId] = questions.map((q) => ({ ...q, answer: null }))
+	}
+
 	return {
 		getQuestionsByProjectId,
 		loading,
 		errorState,
 		loadQuestions,
 		submitAnswers,
+		setQuestions,
 	}
 })
