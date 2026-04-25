@@ -113,15 +113,15 @@ def create_diagnosis(project_id: int, diagnosis_id: int) -> None:
 		print("Attribution:", attribution)
 
 		d_items: list[DiagnosisItem] = parse_diagnosis(diagnosis)
-		d_weights: list[DiagnosisSentenceWeight] = parse_attribution(attribution)
+		d_weights: list[DiagnosisSentenceWeight] = parse_attribution(attribution) or []
 
-		diagnosis_id = save_diagnosis(project_id)
 		save_diagnosis_items(diagnosis_id, d_items)
 		save_diagnosis_sentence_weights(diagnosis_id, d_weights)
+		update_diagnosis_status(diagnosis_id, DiagnosisJobStatus.COMPLETED.value)
 		return
 	except Exception as e:
+		print(f"Diagnosis generation error: {e}")
 		update_diagnosis_status(diagnosis_id, DiagnosisJobStatus.FAILED.value)
-		delete_diagnosis(diagnosis_id)
 		return
 
 def create_diagnosis_status(project_id: int, diagnosis_id: int) -> Optional[int]:
@@ -145,9 +145,8 @@ def create_diagnosis_status(project_id: int, diagnosis_id: int) -> Optional[int]
 				""",
 				(project_id, diagnosis_id, DiagnosisJobStatus.RUNNING.value)
 			)
-			row = cur.fetchone()
 		db.commit()
-		return cast(int, row["diagnosis_id"]) if row else None
+		return diagnosis_id
 	except PsycopgError as e:
 		print(f"Database error: {e}")
 		db.rollback()
@@ -167,11 +166,11 @@ def update_diagnosis_status(diagnosis_id: int, new_status: DiagnosisJobStatus):
 		with db.cursor(row_factory=dict_row) as cur:
 			cur.execute(
 				"""
-				UPDATE diagnosis_job_status 
-				SET job_status = %s 
+				UPDATE diagnosis_job_status
+				SET job_status = %s
 				WHERE diagnosis_id = %s;
 				""",
-				(new_status.value, diagnosis_id)
+				(new_status, diagnosis_id)
 			)
 		db.commit()
 	except PsycopgError as e:
@@ -428,10 +427,10 @@ def get_diagnosis_items(diagnosis_id: int) -> Optional[list[DiagnosisItem]]:
 			   (diagnosis_id,)
 			)
 			rows = cur.fetchall()
-			return cast(list[DiagnosisItem], [r for r in rows]) if rows else None
+			return cast(list[DiagnosisItem], [dict(r) for r in rows])
 	except PsycopgError as e:
 		print(f"Database error: {e}")
-		return None
+		return []
 
 
 def get_diagnosis_sentence_weights(diagnosis_id: int) -> Optional[list[DiagnosisSentenceWeight]]:
@@ -453,7 +452,7 @@ def get_diagnosis_sentence_weights(diagnosis_id: int) -> Optional[list[Diagnosis
 			   (diagnosis_id,)
 			)
 			rows = cur.fetchall()
-			return cast(list[DiagnosisSentenceWeight], [r for r in rows]) if rows else None
+			return cast(list[DiagnosisSentenceWeight], [dict(r) for r in rows])
 	except PsycopgError as e:
 		print(f"Database error: {e}")
-		return None
+		return []

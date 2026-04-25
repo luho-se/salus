@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, current_app, jsonify, request, Response
 from typing import Optional
 import threading
 
@@ -34,7 +34,11 @@ def generate_diagnosis(project_id: int):
 		if diagnosis_id is None:
 			return jsonify({"error": "Failed during diagnosis initialization"}), 500
 		create_diagnosis_status(project_id, diagnosis_id)
-		thread = threading.Thread(target=create_diagnosis, args=(project_id, diagnosis_id), daemon=True)
+		app = current_app._get_current_object()
+		def run_in_context():
+			with app.app_context():
+				create_diagnosis(project_id, diagnosis_id)
+		thread = threading.Thread(target=run_in_context, daemon=True)
 		thread.start()
 		return jsonify({"diagnosis_id": diagnosis_id}), 200
 	except Exception as e:
@@ -54,7 +58,7 @@ def diagnosis_status_route(diagnosis_id: int):
 		status: Optional[DiagnosisJobStatus] = get_diagnosis_status_service(diagnosis_id)
 		if status is None:
 			return jsonify({"error": "Diagnosis status not found"}), 404
-		return jsonify({"status": status.value}), 200
+		return jsonify({"status": status}), 200
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
@@ -92,8 +96,8 @@ def get_diagnosis_route(diagnosis_id: int) -> DiagnosisReturn:
 		items: list[DiagnosisItem] = get_diagnosis_items(diagnosis_id)
 		weights: list[DiagnosisSentenceWeight] = get_diagnosis_sentence_weights(diagnosis_id)
 		
-		if diagnosis is None or items is None or weights is None:
-			return jsonify({"error": "Diagnosis not available"}), 404
+		if diagnosis is None:
+			return jsonify({"error": "Diagnosis not found"}), 404
 
 		res: DiagnosisReturn = {
 			"id": diagnosis["id"],
