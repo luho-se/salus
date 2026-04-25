@@ -3,7 +3,6 @@ from typing import Any, List, Optional, TypedDict
 from openai import OpenAI
 import json
 from pathlib import Path
-from flask import g
 from psycopg import Connection, Error as PsycopgError
 from ..db import get_db
 from psycopg.rows import dict_row
@@ -40,7 +39,7 @@ def generate_questions(text: str):
 
 	system_prompt = load_prompt()
 	user_input = f"""Description: {text}"""
-
+	
 	response = client.chat.completions.create(
 		model="gpt-4o-mini",
 		messages=[
@@ -67,7 +66,6 @@ def save_questions(project_id: int, questions: List[Question]) -> bool:
 	Returns:
 		True if successful, raises Exception otherwise.
 	"""
-
 	if not questions:
 		return True 
 
@@ -129,32 +127,18 @@ def get_questions(project_id: int) -> List[Question]:
 				input_type,
 				input_unit,
 				input_min,
-				input_max
+				input_max,
+				created_at
 			FROM questions
 			WHERE project_id = %s
-			ORDER BY id DESC;
+			ORDER BY id ASC;
 			""",
 			(project_id,)
 		)
 
 		rows = cur.fetchall()
 
-	questions: List[Question] = []
-
-	for row in rows:
-		q: Question = {
-			"id": row[0],
-			"project_id": row[1],
-			"question": row[2],
-			"input_type": row[3],
-			"input_unit": row[4],
-			"input_min": row[5],
-			"input_max": row[6],
-		}
-
-		questions.append(q)
-
-	return questions
+	return [dict(row) for row in rows]
 
 def save_answers(project_id: int, answers: list[dict]) -> bool:
 	"""
@@ -223,20 +207,50 @@ def get_answers(project_id: int) -> List[Answer]:
 
 		rows = cur.fetchall()
 
-	answers: List[Answer] = []
-
-	for row in rows:
-		answers.append({
-			"id": row[0],
-			"project_id": row[1],
-			"question_id": row[2],
-			"answer": row[3],
-			"created_at": row[4],
-			"updated_at": row[5],
-		})
-	return answers
+	return [dict(row) for row in rows]
 
 
+
+
+def save_additional_info(project_id: int, answer: str) -> None:
+	"""
+	Upserts an 'Additional information' question for the project (if it doesn't exist)
+	and saves/updates its answer.
+	"""
+	db: Connection[dict[str, Any]] = get_db()
+	with db.cursor(row_factory=dict_row) as cur:
+		cur.execute(
+			"""
+			SELECT id FROM questions
+			WHERE project_id = %s AND question = 'Additional information'
+			LIMIT 1;
+			""",
+			(project_id,)
+		)
+		row = cur.fetchone()
+		if row:
+			question_id = row["id"]
+		else:
+			cur.execute(
+				"""
+				INSERT INTO questions (project_id, question, input_type)
+				VALUES (%s, 'Additional information', 'text')
+				RETURNING id;
+				""",
+				(project_id,)
+			)
+			question_id = cur.fetchone()["id"]
+
+		cur.execute(
+			"""
+			INSERT INTO answers (project_id, question_id, answer)
+			VALUES (%s, %s, %s)
+			ON CONFLICT (project_id, question_id)
+			DO UPDATE SET answer = EXCLUDED.answer, updated_at = CURRENT_TIMESTAMP;
+			""",
+			(project_id, question_id, answer)
+		)
+	db.commit()
 
 
 def parse_questions(data) -> List[Question]:

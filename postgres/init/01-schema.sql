@@ -49,6 +49,15 @@ CREATE TABLE IF NOT EXISTS answers (
     UNIQUE (project_id, question_id)
 );
 
+CREATE TABLE IF NOT EXISTS diagnosis_job_status (
+	project_id INT NOT NULL,
+	diagnosis_id INT NOT NULL,
+	job_status VARCHAR(32) NOT NULL DEFAULT 'RUNNING',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (project_id, diagnosis_id),
+	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS diagnosis (
 	id SERIAL PRIMARY KEY,
 	project_id INT NOT NULL,
@@ -67,7 +76,7 @@ CREATE TABLE IF NOT EXISTS diagnosis_item (
     FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS diagnosis_sentence_weights (
+CREATE TABLE IF NOT EXISTS diagnosis_sentence_weight (
     id SERIAL PRIMARY KEY,
     diagnosis_id INT NOT NULL,
     question_id INT NOT NULL,

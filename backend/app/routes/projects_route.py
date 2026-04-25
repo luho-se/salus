@@ -10,6 +10,7 @@ from ..services.projects_service import (
 from ..services.questions_service import (
     generate_questions as generate_questions_service,
     save_questions as save_questions_service,
+    get_questions as get_questions_service,
     parse_questions
 )
 
@@ -74,8 +75,9 @@ def generate_questions_route(project_id):
 
         update_project_prompt(project_id, text)
 
+        db_questions = get_questions_service(project_id)
         return jsonify({
-            "questions": parsed_questions
+            "questions": db_questions
         }), 200
 
     except Exception as e:

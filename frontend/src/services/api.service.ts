@@ -5,6 +5,27 @@ import axios, {
 	AxiosError,
 } from "axios";
 
+function toCamel(str: string): string {
+	return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+function toSnake(str: string): string {
+	return str.replace(/([A-Z])/g, (c) => `_${c.toLowerCase()}`);
+}
+
+function transformKeys(obj: unknown, transform: (key: string) => string): unknown {
+	if (Array.isArray(obj)) return obj.map((item) => transformKeys(item, transform));
+	if (obj !== null && typeof obj === "object") {
+		return Object.fromEntries(
+			Object.entries(obj as Record<string, unknown>).map(([k, v]) => [
+				transform(k),
+				transformKeys(v, transform),
+			]),
+		);
+	}
+	return obj;
+}
+
 class ApiService {
 	private api: AxiosInstance;
 
@@ -14,13 +35,25 @@ class ApiService {
 			headers: {
 				"Content-Type": "application/json",
 			},
-			withCredentials: true, // Enable sending cookies with requests
+			withCredentials: true,
 		});
 
-		// Handle request errors
-		this.api.interceptors.request.use(undefined, (error) => {
-			return Promise.reject(error);
+		this.api.interceptors.request.use((config) => {
+			if (config.data) {
+				config.data = transformKeys(config.data, toSnake);
+			}
+			return config;
 		});
+
+		this.api.interceptors.response.use(
+			(response) => {
+				if (response.data) {
+					response.data = transformKeys(response.data, toCamel);
+				}
+				return response;
+			},
+			(error) => Promise.reject(error),
+		);
 	}
 
 	public get<T>(

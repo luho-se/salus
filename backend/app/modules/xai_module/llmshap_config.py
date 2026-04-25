@@ -1,8 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class LLMShapConfig:
-
-	system_instruction: str
-	permanent_keys: list[str] = []
-	exclude_permanent_keys: bool = False
+    system_instruction: str
+    permanent_keys: list[str] = field(default_factory=list)
+    exclude_permanent_keys: bool = False
