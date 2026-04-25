@@ -139,7 +139,6 @@ Initial answers suggest:
 
 **Output:**
 
-```json
 {
   "needs_more_questions": true,
   "questions": [
@@ -176,7 +175,6 @@ Initial answers suggest:
 
 **Output:**
 
-```json
 {
   "needs_more_questions": true,
   "questions": [
@@ -194,7 +192,6 @@ Initial answers suggest:
     }
   ]
 }
-```
 
 **Why this works:**
 
@@ -203,32 +200,7 @@ Initial answers suggest:
 
 ---
 
-## Example 3 — Already Sufficient (No More Questions)
-
-**Context (implicit):**
-
-* Localized knee pain after running
-* No swelling
-* Improves with rest
-* No trauma
-
-**Output:**
-
-```json
-{
-  "needs_more_questions": false,
-  "questions": []
-}
-```
-
-**Why this is important:**
-
-* Prevents over-questioning
-* Shows proper stopping behavior
-
----
-
-## Example 4 — Gastrointestinal (Infection vs Food Reaction)
+## Example 3 — Gastrointestinal (Infection vs Food Reaction)
 
 **Context (implicit):**
 
@@ -238,7 +210,6 @@ Initial answers suggest:
 
 **Output:**
 
-```json
 {
   "needs_more_questions": true,
   "questions": [
@@ -262,7 +233,6 @@ Initial answers suggest:
     }
   ]
 }
-```
 
 **Why this works:**
 
@@ -271,7 +241,7 @@ Initial answers suggest:
 
 ---
 
-## Example 5 — Neurological Concern (Higher Stakes)
+## Example 4 — Neurological Concern (Higher Stakes)
 
 **Context (implicit):**
 
@@ -280,7 +250,6 @@ Initial answers suggest:
 
 **Output:**
 
-```json
 {
   "needs_more_questions": true,
   "questions": [
@@ -300,6 +269,5 @@ Initial answers suggest:
     }
   ]
 }
-```
 
 
