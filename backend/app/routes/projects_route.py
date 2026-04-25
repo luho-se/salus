@@ -11,7 +11,7 @@ from ..services.questions_service import (
     generate_questions as generate_questions_service,
     save_questions as save_questions_service,
     get_questions as get_questions_service,
-    parse_questions
+    parse_questions,
 )
 
 bp = Blueprint("projects", __name__)
@@ -64,6 +64,10 @@ def generate_questions_route(project_id):
 
     if not text:
         return jsonify({"error": "text is required"}), 400
+
+    project = get_project_service(project_id)
+    if project is None:
+        return jsonify({"error": "Project not found"}), 404
 
     try:
         result = generate_questions_service(text)

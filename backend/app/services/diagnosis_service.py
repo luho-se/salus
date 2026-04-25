@@ -401,11 +401,11 @@ def get_diagnosis_list(project_id: int) -> Optional[list[Diagnosis]]:
 				""",
 			   (project_id,)
 			)
-			row = cur.fetchall()
-			return cast(list[Diagnosis], [r for r in row]) if row else None
+			rows = cur.fetchall()
+			return [dict(r) for r in rows]
 	except PsycopgError as e:
 		print(f"Database error: {e}")
-		return None
+		return []
 
 
 def get_diagnosis_items(diagnosis_id: int) -> Optional[list[DiagnosisItem]]:

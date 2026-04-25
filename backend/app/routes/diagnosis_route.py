@@ -14,6 +14,9 @@ from ..services.diagnosis_service import DiagnosisItem
 from ..services.diagnosis_service import Diagnosis
 from ..services.diagnosis_service import DiagnosisReturn
 from ..services.diagnosis_service import DiagnosisSentenceWeight
+from ..services.projects_service import get_project as get_project_service
+from ..services.questions_service import get_questions as get_questions_service
+from ..services.questions_service import get_answers as get_answers_service
 
 
 bp = Blueprint("diagnostic", __name__)
@@ -29,6 +32,20 @@ def generate_diagnosis(project_id: int):
 		diagnosis_id (int)
 	"""
 	try:
+		project = get_project_service(project_id)
+		if project is None:
+			return jsonify({"error": "Project not found"}), 404
+
+		questions = get_questions_service(project_id)
+		main_questions = [q for q in questions if q["question"] != "Additional information"]
+		if not main_questions:
+			return jsonify({"error": "No questions found — generate questions first"}), 400
+
+		answers = get_answers_service(project_id)
+		answered_ids = {a["question_id"] for a in answers if a.get("answer")}
+		unanswered = [q for q in main_questions if q["id"] not in answered_ids]
+		if unanswered:
+			return jsonify({"error": "All questions must be answered before starting a diagnosis"}), 400
 
 		diagnosis_id: int = save_diagnosis(project_id)
 		if diagnosis_id is None:
@@ -73,11 +90,7 @@ def get_diagnosis_list_slim(project_id: int):
 		List of diagnosis (id, project_id, created_at)
 	"""
 	try:
-		diagnoses: list[Diagnosis] = get_diagnosis_list(project_id)
-
-		if diagnoses is None:
-			return jsonify({"error": "No diagnoses found for this project"}), 404
-		
+		diagnoses = get_diagnosis_list(project_id)
 		return jsonify({"diagnoses": diagnoses}), 200
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
