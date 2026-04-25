@@ -216,6 +216,7 @@ def save_answers(project_id: int, answers: list[dict]) -> bool:
 					ON CONFLICT (project_id, question_id)
 					DO UPDATE SET
 						answer = EXCLUDED.answer,
+						llm_generated = EXCLUDED.llm_generated,
 						updated_at = CURRENT_TIMESTAMP;
 					""",
 					(project_id, question_id, answer, llm_generated)

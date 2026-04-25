@@ -176,17 +176,12 @@ const maxWeight = computed(() =>
 					</CardHeader>
 					<CardContent class="flex flex-col gap-3">
 						<div v-for="w in sortedWeights" :key="w.id" class="flex flex-col gap-1">
-							<div class="flex items-baseline justify-between gap-2">
-								<div class="flex flex-col min-w-0">
-									<span class="text-xs font-medium text-muted-foreground truncate">
-										{{ parseWeightAnswer(w.answer).question }}
-									</span>
-									<span class="text-sm truncate">
-										{{ parseWeightAnswer(w.answer).answer }}
-									</span>
-								</div>
-								<span class="text-xs font-semibold tabular-nums shrink-0 text-muted-foreground">
-									{{ maxWeight > 0 ? Math.round((Math.abs(w.sentenceWeight ?? 0) / maxWeight) * 100) : 0 }}%
+							<div class="flex flex-col min-w-0">
+								<span class="text-xs font-medium text-muted-foreground">
+									{{ parseWeightAnswer(w.answer).question }}
+								</span>
+								<span class="text-sm">
+									{{ parseWeightAnswer(w.answer).answer }}
 								</span>
 							</div>
 							<div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">

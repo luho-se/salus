@@ -48,7 +48,8 @@ export const useQuestionStore = defineStore('question', () => {
 		errorState.value = ''
 		// @todo use generate questions endpoint
 		try {
-			await api.post(`/answers/${projectId}`, { answers })
+			const payload = answers.map((a) => ({ ...a, llmGenerated: false }))
+			await api.post(`/answers/${projectId}`, { answers: payload })
 			// Re-fetch to get updated answer state
 			await loadQuestions(projectId)
 			return { success: true }
