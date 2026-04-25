@@ -1,3 +1,5 @@
+from typing import List, Optional, TypedDict
+
 from openai import OpenAI
 import json
 from pathlib import Path
@@ -5,6 +7,15 @@ from pathlib import Path
 client = OpenAI()
 
 PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts" / "q_gen.txt"
+
+class Question(TypedDict):
+    id: int
+    project_id: int
+    question: str
+    input_type: str
+    input_unit: Optional[str]
+    input_min: Optional[float]
+    input_max: Optional[float]
 
 def load_prompt():
 	return PROMPT_PATH.read_text()
@@ -93,3 +104,44 @@ def save_questions(project_id, questions, conn):
 	conn.commit()
 
 	return inserted
+
+def get_questions(project_id: int, conn) -> List[Question]:
+	"""
+	Retrive a list of questions from the database.
+	"""
+	with conn.cursor() as cur:
+		cur.execute(
+			"""
+			SELECT
+				id,
+				project_id,
+				question,
+				input_type,
+				input_unit,
+				input_min,
+				input_max
+			FROM questions
+			WHERE project_id = %s
+			ORDER BY id DESC;
+			""",
+			(project_id,)
+		)
+
+		rows = cur.fetchall()
+
+	questions: List[Question] = []
+
+	for row in rows:
+		q: Question = {
+			"id": row[0],
+			"project_id": row[1],
+			"question": row[2],
+			"input_type": row[3],
+			"input_unit": row[4],
+			"input_min": row[5],
+			"input_max": row[6],
+		}
+
+		questions.append(q)
+
+	return questions

@@ -52,7 +52,7 @@ Schema:
   - "text"
 
 - If input_type = "number":
-  - Include "input_unit" when applicable (e.g., kg, cm, hours, days)
+  - Include "input_unit" when applicable, use the metric system (e.g., kg, cm, hours, days)
   - Include "input_min" and "input_max" when a realistic range exists (use the largest realistic range)
   - All three fields must be logically consistent
 
