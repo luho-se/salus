@@ -298,7 +298,7 @@ def save_diagnosis_sentence_weights(diagnosis_id: int, attribution: dict, answer
 	try:
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
-			for question_id, weight in attribution.items():
+			for question_id, val in attribution.items():
 				qid = int(question_id)
 				answer_text = answer_map.get(qid)
 				if answer_text is None:
@@ -309,7 +309,7 @@ def save_diagnosis_sentence_weights(diagnosis_id: int, attribution: dict, answer
 					INSERT INTO diagnosis_sentence_weight (diagnosis_id, question_id, answer, sentence_weight)
 					VALUES (%s, %s, %s, %s);
 					""",
-					(diagnosis_id, qid, answer_text, float(weight))
+					(diagnosis_id, qid, val["value"], float(val["score"]))
 				)
 		db.commit()
 		return True
