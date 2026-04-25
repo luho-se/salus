@@ -17,6 +17,14 @@ class Question(TypedDict):
     input_min: Optional[float]
     input_max: Optional[float]
 
+class Answer(TypedDict):
+    id: int
+    project_id: int
+    question_id: int
+    answer: Optional[str]
+    created_at: str
+    updated_at: str
+
 def load_prompt():
 	return PROMPT_PATH.read_text()
 
@@ -49,61 +57,58 @@ Symptom Categories:
 		raise ValueError("Invalid JSON from AI")
 	
 
-def save_questions(project_id, questions, conn):
-	"""
-	Save a list of questions to the database.
-	"""
+def save_questions(project_id: int, questions: list[dict], conn) -> bool:
+    """
+    Insert a list of questions into the database.
 
-	if not questions:
-		return []
+    Returns:
+        True if successful, raises Exception otherwise.
+    """
 
-	inserted = []
+    if not questions:
+        return True  # nothing to do, but still successful
 
-	with conn.cursor() as cur:
-		for q in questions:
-			question = q.get("question")
-			input_type = q.get("input_type")
+    try:
+        with conn.cursor() as cur:
+            for q in questions:
+                question = q.get("question")
+                input_type = q.get("input_type")
 
-			if not question or not input_type:
-				raise ValueError("Missing required fields in question")
+                if not question or not input_type:
+                    raise ValueError("Missing required fields in question")
 
-			input_unit = q.get("input_unit")
-			input_min = q.get("input_min")
-			input_max = q.get("input_max")
+                input_unit = q.get("input_unit")
+                input_min = q.get("input_min")
+                input_max = q.get("input_max")
 
-			cur.execute(
-				"""
-				INSERT INTO questions (
-					project_id,
-					question,
-					input_type,
-					input_unit,
-					input_min,
-					input_max
-				)
-				VALUES (%s, %s, %s, %s, %s, %s)
-				RETURNING id;
-				""",
-				(
-					project_id,
-					question,
-					input_type,
-					input_unit,
-					input_min,
-					input_max
-				)
-			)
+                cur.execute(
+                    """
+                    INSERT INTO questions (
+                        project_id,
+                        question,
+                        input_type,
+                        input_unit,
+                        input_min,
+                        input_max
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s);
+                    """,
+                    (
+                        project_id,
+                        question,
+                        input_type,
+                        input_unit,
+                        input_min,
+                        input_max
+                    )
+                )
 
-			inserted_id = cur.fetchone()[0]
+        conn.commit()
+        return True
 
-			inserted.append({
-				"id": inserted_id,
-				"question": question
-			})
-
-	conn.commit()
-
-	return inserted
+    except Exception:
+        conn.rollback()
+        raise
 
 def get_questions(project_id: int, conn) -> List[Question]:
 	"""
@@ -145,3 +150,81 @@ def get_questions(project_id: int, conn) -> List[Question]:
 		questions.append(q)
 
 	return questions
+
+def save_answers(project_id: int, answers: list[dict], conn) -> bool:
+	"""
+	Insert or update multiple answers for a project.
+
+	Returns:
+		True if successful, raises Exception otherwise.
+	"""
+
+	try:
+		with conn.cursor() as cur:
+			for a in answers:
+				question_id = a.get("question_id")
+				answer = a.get("answer")
+
+				if question_id is None:
+					raise ValueError("Missing question_id in answers payload")
+
+				cur.execute(
+					"""
+					INSERT INTO answers (
+						project_id,
+						question_id,
+						answer
+					)
+					VALUES (%s, %s, %s)
+					ON CONFLICT (project_id, question_id)
+					DO UPDATE SET
+						answer = EXCLUDED.answer,
+						updated_at = CURRENT_TIMESTAMP;
+					""",
+					(project_id, question_id, answer)
+				)
+
+		conn.commit()
+		return True
+
+	except Exception:
+		conn.rollback()
+		raise
+
+
+def get_answers(project_id: int, conn) -> List[Answer]:
+	"""
+	Retrieve all answers for a project.
+	"""
+
+	with conn.cursor() as cur:
+		cur.execute(
+			"""
+			SELECT
+				id,
+				project_id,
+				question_id,
+				answer,
+				created_at,
+				updated_at
+			FROM answers
+			WHERE project_id = %s
+			ORDER BY id DESC;
+			""",
+			(project_id,)
+		)
+
+		rows = cur.fetchall()
+
+	answers: List[Answer] = []
+
+	for row in rows:
+		answers.append({
+			"id": row[0],
+			"project_id": row[1],
+			"question_id": row[2],
+			"answer": row[3],
+			"created_at": row[4],
+			"updated_at": row[5],
+		})
+	return answers
