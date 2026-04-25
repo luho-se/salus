@@ -1,23 +1,64 @@
-CREATE TABLE IF NOT EXISTS tasks (
-  id SERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  done BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TYPE project_step AS ENUM (
+  'INITIAL_PROMPT',
+  'INITIAL_QUESTIONS',
+  'DIAGNOSIS'
 );
 
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+CREATE TABLE IF NOT EXISTS projects (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  initial_prompt TEXT,
+  step project_step NOT NULL DEFAULT 'INITIAL_PROMPT',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-DROP TRIGGER IF EXISTS tasks_updated_at_trigger ON tasks;
+CREATE TABLE IF NOT EXISTS questions (
+	id SERIAL PRIMARY KEY,
+	project_id INT NOT NULL,
+	question TEXT NOT NULL, 
+	input_type VARCHAR(50) NOT NULL,
+	input_unit VARCHAR(50) DEFAULT NULL,
+	input_min NUMERIC(10, 2) DEFAULT NULL,
+	input_max NUMERIC(10, 2) DEFAULT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
 
-CREATE TRIGGER tasks_updated_at_trigger
-BEFORE UPDATE ON tasks
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
+CREATE TABLE IF NOT EXISTS answers (
+    id SERIAL PRIMARY KEY,
+    project_id INT NOT NULL,
+    question_id INT NOT NULL,
+    answer TEXT DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+    UNIQUE (project_id, question_id)
+);
+
+CREATE TABLE IF NOT EXISTS diagnosis (
+	id SERIAL PRIMARY KEY,
+	project_id INT NOT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS diagnosis_item (
+	id SERIAL PRIMARY KEY,
+	diagnosis_id INT NOT NULL,
+	title TEXT NOT NULL,
+	motivation TEXT NOT NULL,
+	recommendations TEXT NOT NULL,
+    FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS diagnosis_sentence_weights (
+    id SERIAL PRIMARY KEY,
+    diagnosis_id INT NOT NULL,
+    question_id INT NOT NULL,
+    answer TEXT NOT NULL,
+    sentence_weight NUMERIC(4,3),
+    FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+);
