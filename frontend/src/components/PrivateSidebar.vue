@@ -1,25 +1,18 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { toast } from 'vue-sonner';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from './ui/sidebar';
-import { CookingPot, Carrot, LogOut, LayoutGrid } from 'lucide-vue-next';
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from './ui/sidebar';
+import { FolderOpen, LayoutGrid } from 'lucide-vue-next';
+import { useProjectStore } from '@/stores/projects.store';
+import { computed, onMounted } from 'vue';
 
 const router = useRouter()
+const projectStore = useProjectStore()
 
-// @todo check
-const menuItems = [
-	{
-		title: "Project 1",
-		projectId: 1,
-		icon: CookingPot
-	},
-	{
-		title: "Project 2",
-		projectId: 2,
-		icon: Carrot
-	}
+onMounted(() => {
+	if (!projectStore.projects.length) projectStore.loadProjects()
+})
 
-]
+const recentProjects = computed(() => projectStore.projects.slice(0, 5))
 
 const { state, toggleSidebar } = useSidebar();
 
@@ -74,12 +67,12 @@ const handleSidebarClick = (e: MouseEvent) => {
 				<SidebarGroupLabel>Recent</SidebarGroupLabel>
 				<SidebarGroupContent>
 					<SidebarMenu>
-						<SidebarMenuItem v-for="item in menuItems" :key="item.title">
-							<RouterLink :to="{ name: 'project', params: { id: item.projectId } }" as-child>
+						<SidebarMenuItem v-for="project in recentProjects" :key="project.id">
+							<RouterLink :to="{ name: 'project', params: { id: project.id } }" as-child>
 								<SidebarMenuButton as-child class="cursor-pointer">
 									<div>
-										<component :is="item.icon" />
-										<span>{{ item.title }}</span>
+										<FolderOpen />
+										<span>{{ project.title }}</span>
 									</div>
 								</SidebarMenuButton>
 							</RouterLink>
