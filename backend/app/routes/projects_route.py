@@ -11,6 +11,7 @@ from ..services.questions_service import (
     generate_questions as generate_questions_service,
     generate_follow_up_questions as generate_follow_up_question_service,
     save_questions as save_questions_service,
+    save_answers as save_answers_service,
     get_questions as get_questions_service,
     parse_questions,
 )
@@ -73,17 +74,34 @@ def generate_questions(project_id):
     try:
         result = generate_questions_service(text)
 
-        # parse to list of typed dict class Question
-        parsed_questions = parse_questions(result)
+        # Save extracted Q&A pairs (LLM-generated answers from the initial prompt)
+        extracted = result.get("extracted", [])
+        if extracted:
+            extracted_questions = [
+                {
+                    "question": e["question"],
+                    "input_type": e["input_type"],
+                    "input_unit": e.get("input_unit"),
+                    "input_min": e.get("input_min"),
+                    "input_max": e.get("input_max"),
+                }
+                for e in extracted
+            ]
+            extracted_ids = save_questions_service(project_id, extracted_questions)
+            llm_answers = [
+                {"question_id": qid, "answer": e["answer"], "llm_generated": True}
+                for qid, e in zip(extracted_ids, extracted)
+            ]
+            save_answers_service(project_id, llm_answers)
 
+        # Save follow-up questions (no pre-filled answers)
+        parsed_questions = parse_questions(result)
         save_questions_service(project_id, parsed_questions)
 
         update_project_prompt(project_id, text)
 
         db_questions = get_questions_service(project_id)
-        return jsonify({
-            "questions": db_questions
-        }), 200
+        return jsonify({"questions": db_questions}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

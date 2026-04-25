@@ -28,6 +28,8 @@ def get_db() -> psycopg.Connection[dict[str, Any]]:
 def close_db(_: BaseException | None = None) -> None:
     db = g.pop("db", None)
     if db is not None:
+        if db.info.transaction_status != 0:  # 0 = IDLE, anything else = open transaction
+            db.rollback()
         get_pool().putconn(db)
 
 

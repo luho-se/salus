@@ -48,7 +48,8 @@ export const useQuestionStore = defineStore('question', () => {
 		errorState.value = ''
 		// @todo use generate questions endpoint
 		try {
-			await api.post(`/answers/${projectId}`, { answers })
+			const payload = answers.map((a) => ({ ...a, llmGenerated: false }))
+			await api.post(`/answers/${projectId}`, { answers: payload })
 			// Re-fetch to get updated answer state
 			await loadQuestions(projectId)
 			return { success: true }
@@ -78,18 +79,13 @@ export const useQuestionStore = defineStore('question', () => {
 
 	async function generateFollowUpQuestions(
 		projectId: number,
-	): Promise<{ success: boolean; needsMoreQuestions?: boolean }> {
+	): Promise<{ success: boolean }> {
 		loading.value = true
 		errorState.value = ''
 		try {
-			const response = await api.post<{ needsMoreQuestions: boolean; questions: Question[] }>(
-				`/questions/${projectId}/follow_up`,
-			)
-			const { needsMoreQuestions, questions } = response.data
-			if (needsMoreQuestions && questions.length) {
-				await loadQuestions(projectId)
-			}
-			return { success: true, needsMoreQuestions }
+			await api.post(`/questions/${projectId}/follow_up`)
+			await loadQuestions(projectId)
+			return { success: true }
 		} catch (error) {
 			errorState.value = getErrorMessage(error, 'Failed to generate follow-up questions')
 			return { success: false }
