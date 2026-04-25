@@ -19,5 +19,5 @@ localStorage.removeItem("theme");
 
 <template>
 	<Toaster />
-	<RouterView />
+	<RouterView class="h-full" />
 </template>

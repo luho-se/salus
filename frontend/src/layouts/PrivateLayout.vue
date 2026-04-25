@@ -7,10 +7,10 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 
 
 <template>
-	<div>
-		<SidebarProvider>
+	<div class="h-full">
+		<SidebarProvider class="h-full">
 			<PrivateSidebar />
-			<main class="flex-1 flex">
+			<main class="flex-1 flex h-full">
 				<RouterView />
 			</main>
 		</SidebarProvider>
