@@ -94,10 +94,18 @@ function goBack() {
 }
 
 async function handleSubmit() {
-	const answersArray = Object.entries(answers.value).map(([questionId, answer]) => ({
-		questionId: Number(questionId),
-		answer,
-	}))
+	const originalAnswers = Object.fromEntries(
+		questions.value
+			.filter((q) => q.answer?.answer != null)
+			.map((q) => [q.id, q.answer!.answer]),
+	)
+	const answersArray = Object.entries(answers.value)
+		.filter(([questionId, answer]) => answer !== originalAnswers[Number(questionId)])
+		.map(([questionId, answer]) => ({ questionId: Number(questionId), answer }))
+	if (!answersArray.length) {
+		router.push(`/project/${projectId}/summary`)
+		return
+	}
 	const result = await questionStore.submitAnswers(projectId, answersArray)
 	if (!result.success) {
 		toast.error(questionStore.errorState || 'Failed to save answers')
