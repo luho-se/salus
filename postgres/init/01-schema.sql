@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS diagnosis_item (
     FOREIGN KEY (diagnosis_id) REFERENCES diagnosis(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS diagnosis_sentence_weights (
+CREATE TABLE IF NOT EXISTS diagnosis_sentence_weight (
     id SERIAL PRIMARY KEY,
     diagnosis_id INT NOT NULL,
     question_id INT NOT NULL,
