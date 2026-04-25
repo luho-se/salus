@@ -96,27 +96,20 @@ def create_diagnosis(project_id: int, diagnosis_id: int) -> None:
 		answers: list[Answer] = get_answers(project_id)
 
 		data = {
-			"initial_prompt": initial_prompt,
 		}
 
 		for q in questions:
 			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
 			if answer is None:
 				raise ValueError(f"No answer found for question ID {q['id']}")
-			data[f"q{q['id']}"] = construct_q_and_a_item(q["question"], answer["answer"])
+			data[q['id']] = construct_q_and_a_item(q["question"], answer["answer"])
 
 		config = LLMShapConfig(system_instruction=load_prompt())
 		llmshap_service = LLMShapService(config=config)
 		diagnosis, attribution = llmshap_service.compute_diagnosis(data)
 
-		print("Diagnosis result:", diagnosis)
-		print("Attribution:", attribution)
-
-		d_items: list[DiagnosisItem] = parse_diagnosis(diagnosis)
-		d_weights: list[DiagnosisSentenceWeight] = parse_attribution(attribution) or []
-
-		save_diagnosis_items(diagnosis_id, d_items)
-		save_diagnosis_sentence_weights(diagnosis_id, d_weights)
+		save_diagnosis_items(diagnosis_id, diagnosis)
+		save_diagnosis_sentence_weights(diagnosis_id, attribution, answers)
 		update_diagnosis_status(diagnosis_id, DiagnosisJobStatus.COMPLETED.value)
 		return
 	except Exception as e:
@@ -205,16 +198,6 @@ def get_diagnosis_status(diagnosis_id: int) -> Optional[DiagnosisJobStatus]:
 		return None
 
 
-def parse_diagnosis(diagnosis: dict) -> list[DiagnosisItem]:
-    data = json.loads(diagnosis)
-    return [DiagnosisItem(**item) for item in data["diagnosis"]]
-
-
-def parse_attribution(attribution: dict) -> Optional[list[DiagnosisSentenceWeight]]:
-	# Implementation for handling attribution
-	pass
-
-
 def save_diagnosis(project_id: int) -> int:
 	"""
 	Saves the diagnosis to the database
@@ -270,7 +253,7 @@ def delete_diagnosis(diagnosis_id: int) -> bool:
 		return False
 
 
-def save_diagnosis_items(diagnosis_id: int, items: list[DiagnosisItem]) -> bool:
+def save_diagnosis_items(diagnosis_id: int, diagnosis: dict) -> bool:
 	"""
 	Saves the diagnosis items to the database for the given diagnosis_id
 
@@ -280,6 +263,8 @@ def save_diagnosis_items(diagnosis_id: int, items: list[DiagnosisItem]) -> bool:
 	Returns:
 		bool: True if successful, False otherwise
 	"""
+	data = json.loads(diagnosis)
+	items = [DiagnosisItem(**item) for item in data["diagnosis"]]
 	try:
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
@@ -298,26 +283,29 @@ def save_diagnosis_items(diagnosis_id: int, items: list[DiagnosisItem]) -> bool:
 		db.rollback()
 		return False
 	
-def save_diagnosis_sentence_weights(diagnosis_id: int, weights: list[DiagnosisSentenceWeight]) -> bool:
+def save_diagnosis_sentence_weights(diagnosis_id: int, attribution: dict, answers: list[Answer]) -> bool:
 	"""
 	Saves the diagnosis sentence weights to the database for the given diagnosis_id
 
 	Parameters:
 		diagnosis_id (int)
-		weights (list[DiagnosisSentenceWeight])
+		attribution (dict)
+		answers (list[Answer])
 	Returns:
 		bool: True if successful, False otherwise
 	"""
+	answer_map = {a["question_id"]: a["answer"] for a in answers}
 	try:
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
-			for weight in weights:
+			for question_id, weight in attribution.items():
+				answer_text = answer_map.get(question_id)
 				cur.execute(
 					"""
-					INSERT INTO diagnosis_sentence_weight (diagnosis_id, sentence, weight)
-					VALUES (%s, %s, %s);
+					INSERT INTO diagnosis_sentence_weight (diagnosis_id, question_id, sentence, weight)
+					VALUES (%s, %s, %s, %s);
 					""",
-					(diagnosis_id, weight["sentence"], weight["weight"])
+					(diagnosis_id, question_id, answer_text, weight)
 				)
 		db.commit()
 		return True

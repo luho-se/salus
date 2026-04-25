@@ -42,7 +42,7 @@ class LLMShapService:
 			prompt_codec=self.codec,
 			model=self.llm_interface,
 			use_cache=True,
-			num_threads=2
+			num_threads=8
 		)
 		self.results = self.shapley.attribution()	
 		return self.results.output, self.results.attribution
