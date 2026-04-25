@@ -8,20 +8,24 @@ from psycopg import Connection, Error as PsycopgError
 
 from backend.app import db
 
+
 class DiagnosisItemProbability(str, Enum):
 	LOW = "LOW"
 	MEDIUM = "MEDIUM"
 	HIGH = "HIGH"
-	
+
+
 class DiagnosisCareType(str, Enum):
 	SELF_CARE = "SELF_CARE"
 	PROFESSIONAL_CARE = "PROFESSIONAL_CARE"
 	EMERGENCY_CARE = "EMERGENCY_CARE"
 
+
 class Diagnosis(TypedDict):
 	id: int
 	project_id: int
 	created_at: Optional[str]
+
 
 class DiagnosisItem(TypedDict):
 	id: int
@@ -32,11 +36,13 @@ class DiagnosisItem(TypedDict):
 	motivation: str
 	recommendations: str
 
+
 class DiagnosisSentenceWeight(TypedDict):
 	id: int
 	diagnosis_id: int
 	sentence: str
 	weight: float
+
 
 def create_diagnosis(project_id: int) -> int:
 	try:
@@ -59,6 +65,7 @@ def create_diagnosis(project_id: int) -> int:
 		db.rollback() # type: ignore
 		return None
 
+
 def get_diagnosis(diagnosis_id: int) -> Optional[Diagnosis]:
 	"""
 	Returns the diagnosis for the given diagnosis_id
@@ -78,7 +85,8 @@ def get_diagnosis(diagnosis_id: int) -> Optional[Diagnosis]:
 	except PsycopgError as e:
 		print(f"Database error: {e}")
 		return None
-	
+
+
 def get_latest_diagnosis(project_id: int) -> Optional[Diagnosis]:
 	"""
 	Returns the latest diagnosis for the given project_id
@@ -101,7 +109,8 @@ def get_latest_diagnosis(project_id: int) -> Optional[Diagnosis]:
 		print(f"Database error: {e}")
 		return None
 
-def get_diagnosis_id_list(project_id: int) -> list[int]:
+
+def get_diagnosis_list(project_id: int) -> list[Diagnosis]:
 	"""
 	Returns a list of diagnosis ids for the given project_id,
 	ordered by created_at in descending order.
@@ -111,14 +120,34 @@ def get_diagnosis_id_list(project_id: int) -> list[int]:
 		with db.cursor(row_factory=dict_row) as cur:
 			cur.execute(
 				"""
-				SELECT id FROM diagnoses 
-				WHERE project_id = %s 
-				ORDER BY created_at DESC;
+				SELECT * FROM diagnosis 
+				WHERE project_id = %s
 				""",
 			   (project_id,)
 			)
 			row = cur.fetchall()
-			return cast(list[int], [r["id"] for r in row]) if row else None
+			return cast(list[Diagnosis], [r for r in row]) if row else None
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		return None
+
+
+def get_diagnosis_items(diagnosis_id: int) -> Optional[list[DiagnosisItem]]:
+	"""
+	Returns a list of diagnosis items for the given diagnosis_id
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			cur.execute(
+				"""
+				SELECT * FROM diagnosis_items 
+				WHERE diagnosis_id = %s;
+				""",
+			   (diagnosis_id,)
+			)
+			rows = cur.fetchall()
+			return cast(list[DiagnosisItem], [r for r in rows]) if rows else None
 	except PsycopgError as e:
 		print(f"Database error: {e}")
 		return None
