@@ -27,7 +27,12 @@ const currentAnswer = computed({
 
 onMounted(async () => {
 	await questionStore.loadQuestions(projectId)
-	// Pre-populate answers from existing data
+	const mainQuestions = questions.value.filter(q => q.question !== 'Additional information')
+	const allAnswered = mainQuestions.length > 0 && mainQuestions.every(q => q.answer?.answer != null)
+	if (allAnswered) {
+		router.replace(`/project/${projectId}/summary`)
+		return
+	}
 	for (const q of questions.value) {
 		if (q.answer?.answer != null) {
 			answers.value[q.id] = q.answer.answer
@@ -50,10 +55,10 @@ async function handleSubmit() {
 	}))
 	const result = await questionStore.submitAnswers(projectId, answersArray)
 	if (!result.success) {
-		toast.error(questionStore.errorState || 'Failed to submit answers')
+		toast.error(questionStore.errorState || 'Failed to save answers')
 		return
 	}
-	router.push(`/project/${projectId}`)
+	router.push(`/project/${projectId}/summary`)
 }
 </script>
 
@@ -114,7 +119,7 @@ async function handleSubmit() {
 				</Button>
 				<Button v-else :disabled="!currentAnswer.toString().trim() || questionStore.loading"
 					class="hover:cursor-pointer" @click="handleSubmit">
-					Submit
+					Save answers
 				</Button>
 			</div>
 		</template>
