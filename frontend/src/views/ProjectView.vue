@@ -10,21 +10,22 @@ const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
 
-const projectId = Number(route.params.id)
+const projectId = computed(() => Number(route.params.id))
 const prompt = ref('')
 
-const project = computed(() => projectStore.getProjectById(projectId))
+const project = computed(() => projectStore.getProjectById(projectId.value))
 
-onMounted(() => projectStore.loadProject(projectId))
+onMounted(() => projectStore.loadProject(projectId.value))
 
 async function handleSubmitPrompt() {
+	const projectIdSnapshot = projectId.value
 	if (!prompt.value.trim()) return
-	const result = await projectStore.submitInitialPrompt(projectId, prompt.value.trim())
+	const result = await projectStore.submitInitialPrompt(projectIdSnapshot, prompt.value.trim())
 	if (!result.success) {
 		toast.error(projectStore.errorState || 'Failed to submit prompt')
 		return
 	}
-	router.push(`/project/${projectId}/questions`)
+	router.push(`/project/${projectIdSnapshot}/questions`)
 }
 </script>
 
@@ -40,19 +41,14 @@ async function handleSubmitPrompt() {
 			<!-- INITIAL_PROMPT: enter the prompt -->
 			<template v-if="project.step === 'INITIAL_PROMPT'">
 				<div class="flex flex-col gap-4">
-					<p class="text-muted-foreground">Describe your situation in as much detail as you can. We'll use this to generate targeted questions.</p>
-					<textarea
-						v-model="prompt"
-						rows="6"
+					<p class="text-muted-foreground">Describe your situation in as much detail as you can. We'll use
+						this to generate targeted questions.</p>
+					<textarea v-model="prompt" rows="6"
 						placeholder="e.g. I've had a sharp pain in my lower left leg for two weeks, mainly when walking..."
-						class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-					/>
+						class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
 					<div class="flex justify-end">
-						<Button
-							:disabled="!prompt.trim() || projectStore.loading"
-							class="hover:cursor-pointer"
-							@click="handleSubmitPrompt"
-						>
+						<Button :disabled="!prompt.trim() || projectStore.loading" class="hover:cursor-pointer"
+							@click="handleSubmitPrompt">
 							Analyse
 						</Button>
 					</div>
@@ -68,18 +64,12 @@ async function handleSubmitPrompt() {
 				</Card>
 
 				<div class="flex justify-end">
-					<Button
-						v-if="project.step === 'INITIAL_QUESTIONS'"
-						class="hover:cursor-pointer"
-						@click="router.push(`/project/${projectId}/questions`)"
-					>
+					<Button v-if="project.step === 'INITIAL_QUESTIONS'" class="hover:cursor-pointer"
+						@click="router.push(`/project/${projectId}/questions`)">
 						Answer questions
 					</Button>
-					<Button
-						v-else-if="project.step === 'DIAGNOSIS'"
-						class="hover:cursor-pointer"
-						@click="router.push(`/project/${projectId}/diagnosis`)"
-					>
+					<Button v-else-if="project.step === 'DIAGNOSIS'" class="hover:cursor-pointer"
+						@click="router.push(`/project/${projectId}/diagnosis`)">
 						View diagnosis
 					</Button>
 				</div>
