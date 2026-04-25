@@ -11,7 +11,7 @@ from ..services.diagnosis_service import DiagnosisReturn
 from ..services.diagnosis_service import DiagnosisSentenceWeight
 
 
-bp = Blueprint("diagnostic", url_prefix="/diagnosis")
+bp = Blueprint("diagnostic", __name__)
 
 
 @bp.route("/diagnosis/<int:project_id>", methods=["POST"])
@@ -42,7 +42,7 @@ def get_diagnosis_list_slim(project_id: int):
 	"""
 	try:
 		diagnoses: list[Diagnosis] = get_diagnosis_list(project_id)
-		
+
 		if diagnoses is None:
 			return jsonify({"error": "No diagnoses found for this project"}), 404
 		
