@@ -16,13 +16,12 @@ def generate_questions():
     data = request.get_json()
 
     text = data.get("text")
-    categories = data.get("categories", [])
 
     if not text:
         return jsonify({"error": "text is required"}), 400
 
     try:
-        result = generate_questions_service(text, categories)
+        result = generate_questions_service(text)
         return jsonify(result), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
