@@ -21,15 +21,6 @@ class LLMShapService:
 		"""
 		self.data = data
 
-	def get_latest_diagnosis(self) -> tuple[dict, dict]:
-		"""
-		Get the latest computed diagnosis. If no diagnosis has been computed, it will raise an error.
-		"""
-		if self.results is None:
-			raise ValueError("No diagnosis computed yet")
-
-		return self.results.output, self.results.attribution
-
 	def compute_diagnosis(self, data: dict = None) -> tuple[dict, dict]:
 		"""
 		Compute the diagnosis for the given data. If data is not provided
@@ -68,4 +59,4 @@ if __name__ == "__main__":
 		"question2": "What is the largest mammal? answer: squirrel",
 	}
 	service.compute_diagnosis(data)
-	print(service.get_latest_diagnosis())
+	print(service.compute_diagnosis())

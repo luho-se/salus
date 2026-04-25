@@ -57,7 +57,11 @@ def list_projects() -> List[Project]:
     try:
         db: Connection[dict[str, Any]] = get_db()
         with db.cursor(row_factory=dict_row) as cur:
-            cur.execute("SELECT * FROM projects;")
+            cur.execute(
+                """
+                SELECT * FROM projects;
+                """
+            )
             rows = cur.fetchall()
             return [cast(Project, row) for row in rows]
     except PsycopgError as e:
