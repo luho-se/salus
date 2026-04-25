@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, TypedDict
+from typing import Any, List, Optional, TypedDict, Dict
 
 from openai import OpenAI
 import json
@@ -10,9 +10,10 @@ from psycopg.rows import dict_row
 
 
 
+
 client = OpenAI()
 
-PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts" / "q_gen.txt"
+PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts"
 
 class Question(TypedDict):
     id: int
@@ -31,11 +32,11 @@ class Answer(TypedDict):
     created_at: str
     updated_at: str
 
-def load_prompt():
-	return PROMPT_PATH.read_text()
+def load_prompt(filename: str) -> str:
+	return (PROMPT_PATH / filename).read_text()
 
 
-def generate_questions(text: str):
+def generate_questions(text: str) -> Dict[str, Any]:
 
 	system_prompt = load_prompt()
 	user_input = f"""Description: {text}"""
@@ -57,6 +58,44 @@ def generate_questions(text: str):
 	except json.JSONDecodeError:
 		raise ValueError("Invalid JSON from AI")
 	
+
+def generate_follow_up_questions(project_id: int) -> Dict[str, Any]:
+	system_prompt = load_prompt("fu_q_gen.txt")
+	questions = get_questions(project_id)
+	answers = get_answers(project_id)
+
+	# create input text by pairing questions and answers with format json
+	answer_map = {a["question_id"]: a["answer"] for a in answers}
+	pairs = [
+		{
+			"question": q["question"],
+			"answer": answer_map.get(q["id"])
+		}
+		for q in questions
+		if answer_map.get(q["id"]) is not None
+	]
+
+	if not pairs:
+		raise ValueError("No answered questions available")
+
+	input_text = json.dumps(pairs)
+
+	response = client.chat.completions.create(
+		model="gpt-4o-mini",
+		messages=[
+			{"role": "system", "content": system_prompt},
+			{"role": "user", "content": input_text}
+		],
+		temperature=0.3,
+		response_format={"type": "json_object"}
+	)
+
+	content = response.choices[0].message.content
+
+	try:
+		return json.loads(content)
+	except json.JSONDecodeError:
+		raise ValueError("Invalid JSON from AI")
 
 
 def save_questions(project_id: int, questions: List[Question]) -> bool:
