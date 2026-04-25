@@ -57,6 +57,13 @@ class DiagnosisSentenceWeight(TypedDict):
 	sentence: str
 	weight: float
 
+class DiagnosisReturn(TypedDict):
+	id: int
+	project_id: int
+	created_at: str
+	diagnosis_items: list[DiagnosisItem]
+	diagnosis_weights: list[DiagnosisSentenceWeight]
+
 
 def create_diagnosis(project_id: int) -> int:
 	"""
@@ -83,7 +90,7 @@ def create_diagnosis(project_id: int) -> int:
 		data = {
 			"initial_prompt": initial_prompt,
 		}
-		
+
 		for q in questions:
 			# Find the corresponding answer for the question
 			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
@@ -94,8 +101,11 @@ def create_diagnosis(project_id: int) -> int:
 		# Execute the LLMShapService to compute the diagnosis
 		config = LLMShapConfig(system_instruction=load_prompt())
 		llmshap_service = LLMShapService(config=config)
-		diagnosis_result = llmshap_service.compute_diagnosis(data)
-		print("Diagnosis result:", diagnosis_result)
+		diagnosis, attribution = llmshap_service.compute_diagnosis(data)
+
+		# Parse the diagnosis_result.output and save it to the databas
+		print("Diagnosis result:", diagnosis)
+		print("Attribution:", attribution)
 
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
@@ -218,6 +228,31 @@ def get_diagnosis_items(diagnosis_id: int) -> Optional[list[DiagnosisItem]]:
 			)
 			rows = cur.fetchall()
 			return cast(list[DiagnosisItem], [r for r in rows]) if rows else None
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		return None
+
+
+def get_diagnosis_sentence_weights(diagnosis_id: int) -> Optional[list[DiagnosisSentenceWeight]]:
+	"""
+	Returns a list of diagnosis sentence weights for the given diagnosis_id
+	Parameters:
+		diagnosis_id (int)
+	Returns:
+		list of DiagnosisSentenceWeight or None if not found or on error
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			cur.execute(
+				"""
+				SELECT * FROM diagnosis_sentence_weights 
+				WHERE diagnosis_id = %s;
+				""",
+			   (diagnosis_id,)
+			)
+			rows = cur.fetchall()
+			return cast(list[DiagnosisSentenceWeight], [r for r in rows]) if rows else None
 	except PsycopgError as e:
 		print(f"Database error: {e}")
 		return None
