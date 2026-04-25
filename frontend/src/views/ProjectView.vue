@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useProjectStore } from '@/stores/projects.store'
+import { ChevronRight } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -9,14 +12,21 @@ import { toast } from 'vue-sonner'
 const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
+const diagnosisStore = useDiagnosisStore()
 
 const projectId = computed(() => Number(route.params.id))
 const prompt = ref('')
 const generating = ref(false)
 
 const project = computed(() => projectStore.getProjectById(projectId.value))
+const diagnosisList = computed(() => diagnosisStore.getDiagnosisListByProjectId(projectId.value))
 
-onMounted(() => projectStore.loadProject(projectId.value))
+onMounted(async () => {
+	await projectStore.loadProject(projectId.value)
+	if (project.value?.step !== 'INITIAL_PROMPT') {
+		diagnosisStore.fetchDiagnosisList(projectId.value)
+	}
+})
 
 async function handleSubmitPrompt() {
 	const projectIdSnapshot = projectId.value
@@ -29,6 +39,16 @@ async function handleSubmitPrompt() {
 		return
 	}
 	router.push(`/project/${projectIdSnapshot}/questions`)
+}
+
+function formatDiagnosisDate(iso: string): string {
+	return new Date(iso).toLocaleString(undefined, {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+	})
 }
 </script>
 
@@ -43,7 +63,6 @@ async function handleSubmitPrompt() {
 
 			<!-- INITIAL_PROMPT: enter the prompt -->
 			<template v-if="project.step === 'INITIAL_PROMPT'">
-				<!-- Generating questions spinner -->
 				<template v-if="generating">
 					<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
 						<div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -65,7 +84,7 @@ async function handleSubmitPrompt() {
 				</template>
 			</template>
 
-			<!-- INITIAL_QUESTIONS / DIAGNOSIS: description summary + action -->
+			<!-- Post-prompt: description card + actions + diagnosis history -->
 			<template v-else>
 				<Card>
 					<CardHeader>
@@ -78,30 +97,34 @@ async function handleSubmitPrompt() {
 					</CardContent>
 				</Card>
 
-				<template v-if="project.step === 'INITIAL_QUESTIONS'">
-					<div class="flex flex-col gap-3">
-						<p class="text-sm text-muted-foreground">
-							Questions have been generated based on your description. Review your answers or start the diagnosis.
-						</p>
-						<div class="flex justify-end">
-							<Button class="hover:cursor-pointer"
-								@click="router.push(`/project/${projectId}/summary`)">
-								Question summary
-							</Button>
-						</div>
-					</div>
-				</template>
+				<div class="flex justify-end">
+					<Button class="hover:cursor-pointer"
+						@click="router.push(`/project/${projectId}/summary`)">
+						Question summary
+					</Button>
+				</div>
 
-				<template v-else-if="project.step === 'DIAGNOSIS'">
-					<div class="flex flex-col gap-3">
-						<p class="text-sm text-muted-foreground">
-							Your diagnosis is ready.
+				<!-- Diagnosis history -->
+				<template v-if="diagnosisList.length">
+					<Separator />
+					<div class="flex flex-col gap-2">
+						<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+							Previous diagnoses
 						</p>
-						<div class="flex justify-end">
-							<Button class="hover:cursor-pointer"
-								@click="router.push(`/project/${projectId}/diagnosis`)">
-								View diagnosis
-							</Button>
+						<div
+							v-for="(d, i) in diagnosisList"
+							:key="d.id"
+							class="flex items-center justify-between px-3 py-2.5 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+							@click="router.push(`/project/${projectId}/diagnosis/${d.id}`)"
+						>
+							<div class="flex items-center gap-2">
+								<span class="text-sm">{{ formatDiagnosisDate(d.createdAt) }}</span>
+								<span v-if="i === 0"
+									class="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+									Latest
+								</span>
+							</div>
+							<ChevronRight class="w-4 h-4 text-muted-foreground" />
 						</div>
 					</div>
 				</template>
