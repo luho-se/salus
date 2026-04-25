@@ -14,8 +14,6 @@ from psycopg.rows import dict_row
 from psycopg import Connection, Error as PsycopgError
 from pathlib import Path
 
-from .. import db
-
 PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts" / "d_gen.txt"
 
 

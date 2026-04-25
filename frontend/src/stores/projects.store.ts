@@ -61,8 +61,8 @@ export const useProjectStore = defineStore('project', () => {
 		errorState.value = "";
 
 		try {
-			const response = await api.patch<Project>(`/projects/${projectId}`, { initialPrompt: prompt })
-			projectsById.value[projectId] = response.data
+			await api.post(`/projects/${projectId}/generate_questions`, { text: prompt })
+			await loadProject(projectId)
 			return {success: true}
 		} catch (error) {
 			errorState.value = getErrorMessage(error, "Failed to submit prompt");

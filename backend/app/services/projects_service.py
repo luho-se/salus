@@ -75,11 +75,12 @@ def update_project_prompt(project_id: int, text: str) -> None:
 			cur.execute(
 				"""
 				UPDATE projects
-				SET initial_prompt = %s
+				SET initial_prompt = %s, step = 'INITIAL_QUESTIONS'
 				WHERE id = %s;
 				""",
 				(text, project_id)
 			)
-
+		db.commit()
 	except PsycopgError as e:
 		print(f"Database error: {e}")
+		db.rollback()

@@ -3,7 +3,6 @@ from typing import Any, List, Optional, TypedDict
 from openai import OpenAI
 import json
 from pathlib import Path
-from flask import g
 from psycopg import Connection, Error as PsycopgError
 from ..db import get_db
 from psycopg.rows import dict_row
@@ -67,9 +66,6 @@ def save_questions(project_id: int, questions: List[Question]) -> bool:
 	Returns:
 		True if successful, raises Exception otherwise.
 	"""
-	conn = g.db
-
-
 	if not questions:
 		return True 
 
