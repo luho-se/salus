@@ -1,9 +1,15 @@
-from typing import List, Optional, TypedDict
+from typing import Any, List, Optional, TypedDict
 
 from openai import OpenAI
 import json
 from pathlib import Path
 from flask import g
+from psycopg import Connection, Error as PsycopgError
+from ..db import get_db
+from psycopg.rows import dict_row
+
+
+
 
 client = OpenAI()
 
@@ -30,15 +36,10 @@ def load_prompt():
 	return PROMPT_PATH.read_text()
 
 
-def generate_questions(text, categories=None):
-	categories = categories or []
+def generate_questions(text: str):
 
 	system_prompt = load_prompt()
-	user_input = f"""Description:
-{text}
-
-Symptom Categories:
-{", ".join(categories) if categories else "None"}"""
+	user_input = f"""Description: {text}"""
 
 	response = client.chat.completions.create(
 		model="gpt-4o-mini",
@@ -59,7 +60,7 @@ Symptom Categories:
 	
 
 
-def save_questions(project_id, questions) -> bool:
+def save_questions(project_id: int, questions: List[Question]) -> bool:
 	"""
 	Insert a list of questions into the database.
 
@@ -73,7 +74,8 @@ def save_questions(project_id, questions) -> bool:
 		return True 
 
 	try:
-		with conn.cursor() as cur:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
 			for q in questions:
 				question = q.get("question")
 				input_type = q.get("input_type")
@@ -107,20 +109,19 @@ def save_questions(project_id, questions) -> bool:
 					)
 				)
 
-		conn.commit()
+		db.commit()
 		return True
 
 	except Exception:
-		conn.rollback()
+		db.rollback()
 		raise
 
 def get_questions(project_id: int) -> List[Question]:
 	"""
 	Retrive a list of questions from the database.
 	"""
-	conn = g.db
-
-	with conn.cursor() as cur:
+	db: Connection[dict[str, Any]] = get_db()
+	with db.cursor(row_factory=dict_row) as cur:
 		cur.execute(
 			"""
 			SELECT
@@ -165,9 +166,9 @@ def save_answers(project_id: int, answers: list[dict]) -> bool:
 		True if successful, raises Exception otherwise.
 	"""
 
-	conn = g.db
 	try:
-		with conn.cursor() as cur:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
 			for a in answers:
 				question_id = a.get("question_id")
 				answer = a.get("answer")
@@ -191,11 +192,11 @@ def save_answers(project_id: int, answers: list[dict]) -> bool:
 					(project_id, question_id, answer)
 				)
 
-		conn.commit()
+		db.commit()
 		return True
 
 	except Exception:
-		conn.rollback()
+		db.rollback()
 		raise
 
 
@@ -204,8 +205,8 @@ def get_answers(project_id: int) -> List[Answer]:
 	Retrieve all answers for a project.
 	"""
 
-	conn = g.db
-	with conn.cursor() as cur:
+	db: Connection[dict[str, Any]] = get_db()
+	with db.cursor(row_factory=dict_row) as cur:
 		cur.execute(
 			"""
 			SELECT
@@ -236,3 +237,24 @@ def get_answers(project_id: int) -> List[Answer]:
 			"updated_at": row[5],
 		})
 	return answers
+
+
+
+
+def parse_questions(data) -> List[Question]:
+    questions = data.get("questions", [])
+
+    parsed: List[Question] = []
+
+    for q in questions:
+        parsed.append({
+            "id": q.get("id", 0),
+            "project_id": q.get("project_id", 0),
+            "question": q["question"],
+            "input_type": q["input_type"],
+            "input_unit": q.get("input_unit"),
+            "input_min": q.get("input_min"),
+            "input_max": q.get("input_max"),
+        })
+
+    return parsed

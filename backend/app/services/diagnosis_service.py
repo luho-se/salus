@@ -8,11 +8,19 @@ from backend.app.services.questions_service import get_answers
 from backend.app.services.questions_service import Question
 from backend.app.services.questions_service import Answer
 from backend.app.modules.xai_module.llmshap_service import LLMShapService
+from backend.app.modules.xai_module.llmshap_config import LLMShapConfig
 from ..db import get_db
 from psycopg.rows import dict_row
 from psycopg import Connection, Error as PsycopgError
+from pathlib import Path
 
 from backend.app import db
+
+PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts" / "d_gen.txt"
+
+
+def load_prompt():
+	return PROMPT_PATH.read_text()
 
 
 class DiagnosisItemProbability(str, Enum):
@@ -49,6 +57,13 @@ class DiagnosisSentenceWeight(TypedDict):
 	sentence: str
 	weight: float
 
+class DiagnosisReturn(TypedDict):
+	id: int
+	project_id: int
+	created_at: str
+	diagnosis_items: list[DiagnosisItem]
+	diagnosis_weights: list[DiagnosisSentenceWeight]
+
 
 def create_diagnosis(project_id: int) -> int:
 	"""
@@ -61,6 +76,10 @@ def create_diagnosis(project_id: int) -> int:
 		int: The ID of the created diagnosis or None if an error occurs
 	"""
 	try:
+
+		def construct_q_and_a_item(question: str, answer: str) -> str:
+			return f"<Question>{question}</Question><Answer>{answer}</Answer>"
+
 		# Construct the input for the LLMShapService
 		initial_prompt = db.get_project_initial_prompt(project_id)
 		if initial_prompt is None:
@@ -70,17 +89,23 @@ def create_diagnosis(project_id: int) -> int:
 
 		data = {
 			"initial_prompt": initial_prompt,
-			"q_and_a_items": []
 		}
+
 		for q in questions:
-			a = next((a for a in answers if a["question_id"] == q["id"]), None)
-			if a is not None:
-				data["q_and_a_items"].append((q["question"], a["answer"]))
+			# Find the corresponding answer for the question
+			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
+			if answer is None:
+				raise ValueError(f"No answer found for question ID {q['id']}")
+			data[f"q{q['id']}"] = construct_q_and_a_item(q["question"], answer["answer"])
 
 		# Execute the LLMShapService to compute the diagnosis
-		llmshap_service = LLMShapService()
-		diagnosis_result = llmshap_service.compute_diagnosis(data)
-		print("Diagnosis result:", diagnosis_result)
+		config = LLMShapConfig(system_instruction=load_prompt())
+		llmshap_service = LLMShapService(config=config)
+		diagnosis, attribution = llmshap_service.compute_diagnosis(data)
+
+		# Parse the diagnosis_result.output and save it to the databas
+		print("Diagnosis result:", diagnosis)
+		print("Attribution:", attribution)
 
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
@@ -203,6 +228,31 @@ def get_diagnosis_items(diagnosis_id: int) -> Optional[list[DiagnosisItem]]:
 			)
 			rows = cur.fetchall()
 			return cast(list[DiagnosisItem], [r for r in rows]) if rows else None
+	except PsycopgError as e:
+		print(f"Database error: {e}")
+		return None
+
+
+def get_diagnosis_sentence_weights(diagnosis_id: int) -> Optional[list[DiagnosisSentenceWeight]]:
+	"""
+	Returns a list of diagnosis sentence weights for the given diagnosis_id
+	Parameters:
+		diagnosis_id (int)
+	Returns:
+		list of DiagnosisSentenceWeight or None if not found or on error
+	"""
+	try:
+		db: Connection[dict[str, Any]] = get_db()
+		with db.cursor(row_factory=dict_row) as cur:
+			cur.execute(
+				"""
+				SELECT * FROM diagnosis_sentence_weights 
+				WHERE diagnosis_id = %s;
+				""",
+			   (diagnosis_id,)
+			)
+			rows = cur.fetchall()
+			return cast(list[DiagnosisSentenceWeight], [r for r in rows]) if rows else None
 	except PsycopgError as e:
 		print(f"Database error: {e}")
 		return None
