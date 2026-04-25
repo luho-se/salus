@@ -16,27 +16,39 @@ const projectId = Number(route.params.id)
 const currentIndex = ref(0)
 const answers = ref<Record<number, string>>({})
 
-const questions = computed(() => questionStore.getQuestionsByProjectId(projectId))
-const currentQuestion = computed(() => questions.value[currentIndex.value])
+const allQuestions = computed(() => questionStore.getQuestionsByProjectId(projectId))
+// Exclude "Additional information" — it lives on the summary page
+const questions = computed(() =>
+	allQuestions.value.filter((q) => q.question !== 'Additional information'),
+)
+const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null)
 const isFirst = computed(() => currentIndex.value === 0)
 const isLast = computed(() => currentIndex.value === questions.value.length - 1)
 const currentAnswer = computed({
-	get: () => answers.value[currentQuestion.value?.id] ?? '',
-	set: (val) => { answers.value[currentQuestion.value.id] = val },
+	get: () => (currentQuestion.value ? (answers.value[currentQuestion.value.id] ?? '') : ''),
+	set: (val) => {
+		if (currentQuestion.value) answers.value[currentQuestion.value.id] = val
+	},
 })
 
 onMounted(async () => {
 	await questionStore.loadQuestions(projectId)
-	const mainQuestions = questions.value.filter(q => q.question !== 'Additional information')
-	const allAnswered = mainQuestions.length > 0 && mainQuestions.every(q => q.answer?.answer != null)
+	const allAnswered =
+		questions.value.length > 0 && questions.value.every((q) => q.answer?.answer != null)
 	if (allAnswered) {
 		router.replace(`/project/${projectId}/summary`)
 		return
 	}
+	// Pre-fill existing answers
 	for (const q of questions.value) {
 		if (q.answer?.answer != null) {
 			answers.value[q.id] = q.answer.answer
 		}
+	}
+	// Jump to the first unanswered question
+	const firstUnanswered = questions.value.findIndex((q) => !answers.value[q.id])
+	if (firstUnanswered > 0) {
+		currentIndex.value = firstUnanswered
 	}
 })
 
@@ -81,7 +93,7 @@ async function handleSubmit() {
 			</div>
 
 			<!-- Question card -->
-			<Card class="min-h-64">
+			<Card v-if="currentQuestion" class="min-h-64">
 				<CardHeader>
 					<CardTitle class="text-xl font-medium leading-snug">
 						{{ currentQuestion.question }}

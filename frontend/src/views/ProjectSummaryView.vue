@@ -92,13 +92,7 @@ async function handleGenerateFollowUp() {
 		toast.error(questionStore.errorState || 'Failed to generate follow-up questions')
 		return
 	}
-	if (result.needsMoreQuestions) {
-		followUpRecommended.value = true
-		router.push(`/project/${projectId}/questions`)
-	} else {
-		followUpRecommended.value = false
-		toast.info('No additional questions needed — you can proceed with diagnosis.')
-	}
+	followUpRecommended.value = result.needsMoreQuestions ?? false
 }
 
 async function handleStartDiagnosis() {
@@ -216,9 +210,15 @@ async function handleStartDiagnosis() {
 
 			<!-- Follow-up recommendation banner -->
 			<div v-if="followUpRecommended === true"
-				class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-				<AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
-				<p>The AI recommends answering more targeted questions to improve diagnosis accuracy. Follow-up questions have been added.</p>
+				class="flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+				<div class="flex items-start gap-3">
+					<AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+					<p>The AI recommends answering more targeted questions to improve diagnosis accuracy. Follow-up questions have been added.</p>
+				</div>
+				<button class="shrink-0 underline underline-offset-2 hover:opacity-75 whitespace-nowrap"
+					@click="router.push(`/project/${projectId}/questions`)">
+					Go to questions
+				</button>
 			</div>
 			<div v-else-if="followUpRecommended === false"
 				class="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
