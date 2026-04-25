@@ -36,7 +36,7 @@ def load_prompt():
 	return PROMPT_PATH.read_text()
 
 
-def generate_questions(text):
+def generate_questions(text: str):
 
 	system_prompt = load_prompt()
 	user_input = f"""Description: {text}"""
@@ -60,7 +60,7 @@ def generate_questions(text):
 	
 
 
-def save_questions(project_id, questions) -> bool:
+def save_questions(project_id: int, questions: List[Question]) -> bool:
 	"""
 	Insert a list of questions into the database.
 
