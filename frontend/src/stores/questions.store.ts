@@ -78,18 +78,13 @@ export const useQuestionStore = defineStore('question', () => {
 
 	async function generateFollowUpQuestions(
 		projectId: number,
-	): Promise<{ success: boolean; needsMoreQuestions?: boolean }> {
+	): Promise<{ success: boolean }> {
 		loading.value = true
 		errorState.value = ''
 		try {
-			const response = await api.post<{ needsMoreQuestions: boolean; questions: Question[] }>(
-				`/questions/${projectId}/follow_up`,
-			)
-			const { needsMoreQuestions, questions } = response.data
-			if (needsMoreQuestions && questions.length) {
-				await loadQuestions(projectId)
-			}
-			return { success: true, needsMoreQuestions }
+			await api.post(`/questions/${projectId}/follow_up`)
+			await loadQuestions(projectId)
+			return { success: true }
 		} catch (error) {
 			errorState.value = getErrorMessage(error, 'Failed to generate follow-up questions')
 			return { success: false }

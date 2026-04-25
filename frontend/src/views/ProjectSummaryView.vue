@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useQuestionStore } from '@/stores/questions.store'
 import { QuestionWithAnswer } from '@/types/types'
-import { Pencil, Check, X, AlertCircle } from 'lucide-vue-next'
+import { Pencil, Check, X } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -28,7 +29,6 @@ const additionalInfo = ref('')
 const editingId = ref<number | null>(null)
 const editValue = ref('')
 
-const followUpRecommended = ref<boolean | null>(null)
 const generatingFollowUp = ref(false)
 
 const latestDiagnosis = computed(() => {
@@ -83,7 +83,7 @@ async function handleGenerateFollowUp() {
 		toast.error(questionStore.errorState || 'Failed to generate follow-up questions')
 		return
 	}
-	followUpRecommended.value = result.needsMoreQuestions ?? false
+	router.push(`/project/${projectId}/questions`)
 }
 
 async function handleStartDiagnosis() {
@@ -168,35 +168,26 @@ async function handleStartDiagnosis() {
 				</Card>
 			</div>
 
-			<!-- Follow-up recommendation banner -->
-			<div v-if="followUpRecommended === true"
-				class="flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-				<div class="flex items-start gap-3">
-					<AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
-					<p>The AI recommends answering more targeted questions to improve diagnosis accuracy. Follow-up questions have been added.</p>
-				</div>
-				<button class="shrink-0 underline underline-offset-2 hover:opacity-75 whitespace-nowrap"
-					@click="router.push(`/project/${projectId}/questions`)">
-					Go to questions
-				</button>
-			</div>
-			<div v-else-if="followUpRecommended === false"
-				class="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-				<Check class="mt-0.5 h-4 w-4 shrink-0" />
-				<p>The AI determined that your current answers are sufficient for a reliable diagnosis.</p>
-			</div>
-
 			<!-- Actions -->
 			<div class="flex justify-between items-center pt-2">
-				<Button variant="outline" :disabled="generatingFollowUp || diagnosisStatus === 'IN_PROGRESS'" class="hover:cursor-pointer" @click="handleGenerateFollowUp">
-					<template v-if="generatingFollowUp">
-						<div class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-						Checking…
-					</template>
-					<template v-else>
-						Generate follow-up questions
-					</template>
-				</Button>
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger as-child>
+							<Button variant="outline" :disabled="generatingFollowUp" class="hover:cursor-pointer" @click="handleGenerateFollowUp">
+								<template v-if="generatingFollowUp">
+									<div class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+									Generating…
+								</template>
+								<template v-else>
+									Generate follow-up questions
+								</template>
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent class="max-w-64 text-center">
+							More questions typically improve diagnosis accuracy, but each additional question increases computation time.
+						</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
 				<Button :disabled="!canStartDiagnosis || diagnosisStore.loading" class="hover:cursor-pointer" @click="handleStartDiagnosis">
 					Start Diagnosis
 				</Button>
