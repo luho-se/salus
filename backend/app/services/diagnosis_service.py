@@ -8,11 +8,19 @@ from backend.app.services.questions_service import get_answers
 from backend.app.services.questions_service import Question
 from backend.app.services.questions_service import Answer
 from backend.app.modules.xai_module.llmshap_service import LLMShapService
+from backend.app.modules.xai_module.llmshap_config import LLMShapConfig
 from ..db import get_db
 from psycopg.rows import dict_row
 from psycopg import Connection, Error as PsycopgError
+from pathlib import Path
 
 from backend.app import db
+
+PROMPT_PATH = Path(__file__).parent / "resources" / "ai_prompts" / "d_gen.txt"
+
+
+def load_prompt():
+	return PROMPT_PATH.read_text()
 
 
 class DiagnosisItemProbability(str, Enum):
@@ -75,6 +83,7 @@ def create_diagnosis(project_id: int) -> int:
 		data = {
 			"initial_prompt": initial_prompt,
 		}
+		
 		for q in questions:
 			# Find the corresponding answer for the question
 			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
@@ -83,7 +92,8 @@ def create_diagnosis(project_id: int) -> int:
 			data[f"q{q['id']}"] = construct_q_and_a_item(q["question"], answer["answer"])
 
 		# Execute the LLMShapService to compute the diagnosis
-		llmshap_service = LLMShapService()
+		config = LLMShapConfig(system_instruction=load_prompt())
+		llmshap_service = LLMShapService(config=config)
 		diagnosis_result = llmshap_service.compute_diagnosis(data)
 		print("Diagnosis result:", diagnosis_result)
 

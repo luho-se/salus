@@ -4,5 +4,5 @@ from dataclasses import dataclass
 class LLMShapConfig:
 
 	system_instruction: str
-	permanent_keys: list[str]
-	exclude_permanent_keys: bool
+	permanent_keys: list[str] = []
+	exclude_permanent_keys: bool = False
