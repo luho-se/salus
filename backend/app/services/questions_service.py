@@ -127,32 +127,18 @@ def get_questions(project_id: int) -> List[Question]:
 				input_type,
 				input_unit,
 				input_min,
-				input_max
+				input_max,
+				created_at
 			FROM questions
 			WHERE project_id = %s
-			ORDER BY id DESC;
+			ORDER BY id ASC;
 			""",
 			(project_id,)
 		)
 
 		rows = cur.fetchall()
 
-	questions: List[Question] = []
-
-	for row in rows:
-		q: Question = {
-			"id": row[0],
-			"project_id": row[1],
-			"question": row[2],
-			"input_type": row[3],
-			"input_unit": row[4],
-			"input_min": row[5],
-			"input_max": row[6],
-		}
-
-		questions.append(q)
-
-	return questions
+	return [dict(row) for row in rows]
 
 def save_answers(project_id: int, answers: list[dict]) -> bool:
 	"""
@@ -221,18 +207,7 @@ def get_answers(project_id: int) -> List[Answer]:
 
 		rows = cur.fetchall()
 
-	answers: List[Answer] = []
-
-	for row in rows:
-		answers.append({
-			"id": row[0],
-			"project_id": row[1],
-			"question_id": row[2],
-			"answer": row[3],
-			"created_at": row[4],
-			"updated_at": row[5],
-		})
-	return answers
+	return [dict(row) for row in rows]
 
 
 
