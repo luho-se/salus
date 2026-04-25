@@ -1,7 +1,13 @@
 from typing import cast, Optional, Any, TypedDict
 from enum import Enum
 
-from backend.app.services.projects_service import Project, ProjectStep
+from backend.app.services.projects_service import Project
+from backend.app.services.projects_service import ProjectStep
+from backend.app.services.questions_service import get_questions
+from backend.app.services.questions_service import get_answers
+from backend.app.services.questions_service import Question
+from backend.app.services.questions_service import Answer
+from backend.app.modules.xai_module.llmshap_service import LLMShapService
 from ..db import get_db
 from psycopg.rows import dict_row
 from psycopg import Connection, Error as PsycopgError
@@ -46,6 +52,26 @@ class DiagnosisSentenceWeight(TypedDict):
 
 def create_diagnosis(project_id: int) -> int:
 	try:
+		# Construct the input for the LLMShapService
+		initial_prompt = db.get_project_initial_prompt(project_id)
+		if initial_prompt is None:
+			raise ValueError("Initial prompt for project not found")
+		questions: list[Question] = get_questions(project_id)
+		answers: list[Answer] = get_answers(project_id)
+
+		data = {
+			"initial_prompt": initial_prompt,
+			"q_and_a_items": []
+		}
+		for q in questions:
+			a = next((a for a in answers if a["question_id"] == q["id"]), None)
+			if a is not None:
+				data["q_and_a_items"].append((q["question"], a["answer"]))
+
+		# Execute the LLMShapService to compute the diagnosis
+		llmshap_service = LLMShapService()
+		diagnosis_result = llmshap_service.compute_diagnosis(data)
+		print("Diagnosis result:", diagnosis_result)
 
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
