@@ -20,12 +20,13 @@ def generate_diagnosis(project_id: int):
 
 
 @bp.route("/diagnosis/<int:diagnosis_id>/items", methods=["GET"])
-def get_diagnoses(diagnosis_id: int):
+def get_diagnosis_items(diagnosis_id: int):
 	"""
 	Returns the all diagnosis items for the given diagnosis_id
 	Parameters:
 		diagnosis_id (int)
 	Returns:
+		list of DiagnosisItem or None if not found or on error
 	"""
 	try: 
 		diagnosis_items: list[DiagnosisItem] = get_diagnosis_items(diagnosis_id)

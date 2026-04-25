@@ -61,6 +61,10 @@ def create_diagnosis(project_id: int) -> int:
 		int: The ID of the created diagnosis or None if an error occurs
 	"""
 	try:
+
+		def construct_q_and_a_item(question: str, answer: str) -> str:
+			return f"<Question>{question}</Question><Answer>{answer}</Answer>"
+
 		# Construct the input for the LLMShapService
 		initial_prompt = db.get_project_initial_prompt(project_id)
 		if initial_prompt is None:
@@ -70,12 +74,13 @@ def create_diagnosis(project_id: int) -> int:
 
 		data = {
 			"initial_prompt": initial_prompt,
-			"q_and_a_items": []
 		}
 		for q in questions:
-			a = next((a for a in answers if a["question_id"] == q["id"]), None)
-			if a is not None:
-				data["q_and_a_items"].append((q["question"], a["answer"]))
+			# Find the corresponding answer for the question
+			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
+			if answer is None:
+				raise ValueError(f"No answer found for question ID {q['id']}")
+			data[f"q{q['id']}"] = construct_q_and_a_item(q["question"], answer["answer"])
 
 		# Execute the LLMShapService to compute the diagnosis
 		llmshap_service = LLMShapService()
