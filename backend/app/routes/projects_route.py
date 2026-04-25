@@ -9,6 +9,7 @@ from ..services.projects_service import (
 
 from ..services.questions_service import (
     generate_questions as generate_questions_service,
+    generate_follow_up_questions as generate_follow_up_question_service,
     save_questions as save_questions_service,
     get_questions as get_questions_service,
     parse_questions
@@ -57,7 +58,7 @@ def create_project() -> Union[Response, Tuple[Response, int]]:
     return jsonify(project), 201
 
 @bp.route("/projects/<int:project_id>/generate_questions", methods=["POST"])
-def generate_questions_route(project_id):
+def generate_questions(project_id):
     data = request.get_json()
 
     text = data.get("text")
@@ -82,3 +83,26 @@ def generate_questions_route(project_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/projects/<int:project_id>/generate_follow_up_questions", methods=["POST"])
+def generate_follow_up_questions(project_id):
+
+	try:
+		result = generate_follow_up_question_service(project_id)
+		
+		if "questions" not in result:
+			return jsonify({"error": "Invalid AI response"}), 500
+
+		# parse to list of typed dict class Question
+		parsed_questions = parse_questions(result)
+
+		save_questions_service(project_id, parsed_questions)
+
+		db_questions = get_questions_service(project_id)
+		return jsonify({
+			"questions": db_questions
+		}), 200
+
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
