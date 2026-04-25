@@ -70,12 +70,8 @@ async function handleSubmit() {
 					Question {{ currentIndex + 1 }} of {{ questions.length }}
 				</span>
 				<div class="flex gap-1">
-					<div
-						v-for="(_, i) in questions"
-						:key="i"
-						class="h-1.5 w-6 rounded-full transition-colors"
-						:class="i <= currentIndex ? 'bg-primary' : 'bg-muted'"
-					/>
+					<div v-for="(_, i) in questions" :key="i" class="h-1.5 w-6 rounded-full transition-colors"
+						:class="i <= currentIndex ? 'bg-primary' : 'bg-muted'" />
 				</div>
 			</div>
 
@@ -88,61 +84,36 @@ async function handleSubmit() {
 				</CardHeader>
 				<CardContent>
 					<!-- text input -->
-					<Input
-						v-if="currentQuestion.inputType === 'text'"
-						v-model="currentAnswer"
-						type="text"
-						placeholder="Your answer..."
-					/>
+					<Input v-if="currentQuestion.inputType === 'text'" v-model="currentAnswer" type="text"
+						placeholder="Your answer..." />
 
 					<!-- number input -->
 					<div v-else-if="currentQuestion.inputType === 'number'" class="flex items-center gap-2">
-						<Input
-							v-model="currentAnswer"
-							type="number"
-							:min="currentQuestion.inputMin ?? undefined"
-							:max="currentQuestion.inputMax ?? undefined"
-							placeholder="0"
-							class="max-w-40"
-						/>
+						<Input v-model="currentAnswer" type="number" :min="currentQuestion.inputMin ?? undefined"
+							:max="currentQuestion.inputMax ?? undefined" placeholder="0" class="max-w-40" />
 						<span v-if="currentQuestion.inputUnit" class="text-sm text-muted-foreground">
 							{{ currentQuestion.inputUnit }}
 						</span>
 					</div>
 
 					<!-- body_location selector -->
-					<BodyLocationSelector
-						v-else-if="currentQuestion.inputType === 'body_location'"
-						v-model="currentAnswer"
-					/>
+					<BodyLocationSelector v-else-if="currentQuestion.inputType === 'body_location'"
+						v-model="currentAnswer" />
 				</CardContent>
 			</Card>
 
 			<!-- Navigation -->
 			<div class="flex justify-between">
-				<Button
-					variant="outline"
-					:disabled="isFirst"
-					class="hover:cursor-pointer"
-					@click="goBack"
-				>
+				<Button variant="outline" :disabled="isFirst" class="hover:cursor-pointer" @click="goBack">
 					Back
 				</Button>
 
-				<Button
-					v-if="!isLast"
-					:disabled="!currentAnswer.trim()"
-					class="hover:cursor-pointer"
-					@click="goNext"
-				>
+				<Button v-if="!isLast" :disabled="!currentAnswer.toString().trim()" class="hover:cursor-pointer"
+					@click="goNext">
 					Next
 				</Button>
-				<Button
-					v-else
-					:disabled="!currentAnswer.trim() || questionStore.loading"
-					class="hover:cursor-pointer"
-					@click="handleSubmit"
-				>
+				<Button v-else :disabled="!currentAnswer.toString().trim() || questionStore.loading"
+					class="hover:cursor-pointer" @click="handleSubmit">
 					Submit
 				</Button>
 			</div>
