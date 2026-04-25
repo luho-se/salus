@@ -3,7 +3,9 @@ import BodyLocationSelector from '@/components/BodyLocationSelector.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useQuestionStore } from '@/stores/questions.store'
+import { Sparkles } from 'lucide-vue-next'
 import { computed, onMounted, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -126,9 +128,23 @@ async function handleSubmit() {
 			<!-- Question card -->
 			<Card v-if="currentQuestion" class="min-h-64">
 				<CardHeader>
-					<CardTitle class="text-xl font-medium leading-snug">
-						{{ currentQuestion.question }}
-					</CardTitle>
+					<div class="flex items-start justify-between gap-4">
+						<CardTitle class="text-xl font-medium leading-snug">
+							{{ currentQuestion.question }}
+						</CardTitle>
+						<TooltipProvider v-if="currentQuestion.answer?.llmGenerated">
+							<Tooltip>
+								<TooltipTrigger as-child>
+									<span class="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 font-medium cursor-default select-none shrink-0">
+										<Sparkles class="w-3 h-3" />AI
+									</span>
+								</TooltipTrigger>
+								<TooltipContent class="max-w-56 text-center">
+									This answer was extracted by AI from your initial description. You can edit it if needed.
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					</div>
 				</CardHeader>
 				<CardContent>
 					<!-- text input -->
@@ -152,8 +168,8 @@ async function handleSubmit() {
 							class="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-muted"
 						/>
 						<div class="flex justify-between text-xs text-muted-foreground">
-							<span>{{ currentQuestion.inputMin }}{{ currentQuestion.inputUnit ? ' ' + currentQuestion.inputUnit : '' }}</span>
-							<span>{{ currentQuestion.inputMax }}{{ currentQuestion.inputUnit ? ' ' + currentQuestion.inputUnit : '' }}</span>
+							<span>{{ Math.round(currentQuestion.inputMin!) }}{{ currentQuestion.inputUnit ? ' ' + currentQuestion.inputUnit : '' }}</span>
+							<span>{{ Math.round(currentQuestion.inputMax!) }}{{ currentQuestion.inputUnit ? ' ' + currentQuestion.inputUnit : '' }}</span>
 						</div>
 					</div>
 
