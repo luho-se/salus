@@ -15,9 +15,9 @@ const projectId = Number(route.params.id)
 const diagnosis = computed(() => diagnosisStore.getDiagnosisByProjectId(projectId))
 
 onMounted(async () => {
-	const result = await diagnosisStore.createDiagnosis(projectId)
+	const result = await diagnosisStore.loadDiagnosis(projectId)
 	if (!result.success) {
-		toast.error(diagnosisStore.errorState || 'Failed to generate diagnosis')
+		toast.error(diagnosisStore.errorState || 'Failed to load diagnosis')
 	}
 })
 

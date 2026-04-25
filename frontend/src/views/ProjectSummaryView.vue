@@ -88,13 +88,13 @@ async function handleStartDiagnosis() {
 				router.push(`/project/${projectId}/diagnosis`)
 			} else if (status === 'FAILED') {
 				clearInterval(pollInterval!)
+				diagnosisStatus.value = 'FAILED'
 				toast.error('Diagnosis failed. Please try again.')
 			}
-		} catch {
-			// Status endpoint not yet implemented — navigate directly
+		} catch (e) {
 			clearInterval(pollInterval!)
-			await diagnosisStore.loadDiagnosis(projectId)
-			router.push(`/project/${projectId}/diagnosis`)
+			diagnosisStatus.value = 'FAILED'
+			toast.error('Lost contact with the diagnosis service. Please try again.')
 		}
 	}, 3000)
 }
