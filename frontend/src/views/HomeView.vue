@@ -2,10 +2,14 @@
 import CreateProjectForm, { CreateProjectValues } from '@/components/CreateProjectForm.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useProjectStore } from '@/stores/projects.store';
 import { FolderPlus, Plus } from 'lucide-vue-next';
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 
+const router = useRouter()
+const projectStore = useProjectStore()
 
 const dialogRef = ref()
 
@@ -13,10 +17,14 @@ function trigger() {
 	dialogRef.value.toggleDialog()
 }
 
-const handleNewProject = (values: CreateProjectValues) => {
-	console.log("Form submitted!", values)
-	trigger();
-	// todo trigger call to backend, get new project id then navigate to correct project
+const handleNewProject = async (values: CreateProjectValues) => {
+	const result = await projectStore.createProject(values)
+	if (!result.success) {
+		toast.error(projectStore.errorState || 'Failed to create project')
+		return
+	}
+	trigger()
+	router.push(`/project/${result.project!.id}`)
 }
 
 </script>

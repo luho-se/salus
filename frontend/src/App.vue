@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { Toaster } from "vue-sonner";
+import { Toaster } from '@/components/ui/sonner'
+import 'vue-sonner/style.css'
 import { RouterView } from 'vue-router';
 
 document.documentElement.classList.toggle(
@@ -18,6 +18,6 @@ localStorage.removeItem("theme");
 </script>
 
 <template>
-	<Toaster />
+	<Toaster position="bottom-right" rich-colors />
 	<RouterView class="h-full" />
 </template>

@@ -55,19 +55,19 @@ export const useProjectStore = defineStore('project', () => {
 
 	async function createProject(
 		payload: {title: string},
-	): Promise<{ success: boolean }> {
+	): Promise<{ success: boolean; project?: Project }> {
 		loading.value = true;
 		errorState.value = "";
 
 		try {
-			const response = await  await api.post<Project>('/projects')
+			const response = await api.post<Project>('/projects', payload)
 			projectsById.value[response.data.id] = response.data
+			return {success: true, project: response.data};
 		} catch (error) {
 			errorState.value = getErrorMessage(error, "Failed to create project");
 			return {success: false}
 		} finally {
 			loading.value = false;
-			return {success: true};
 		}
 	}
 

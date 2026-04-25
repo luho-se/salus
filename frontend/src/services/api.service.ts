@@ -17,10 +17,10 @@ class ApiService {
 			withCredentials: true, // Enable sending cookies with requests
 		});
 
-		// Handle request errors
-		this.api.interceptors.request.use(undefined, (error) => {
-			return Promise.reject(error);
-		});
+		this.api.interceptors.response.use(
+			(response) => response,
+			(error) => Promise.reject(error),
+		);
 	}
 
 	public get<T>(
