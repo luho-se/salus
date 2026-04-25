@@ -66,3 +66,9 @@ export interface ProjectDetail extends Project {
   questions: QuestionWithAnswer[];
   diagnosis: Diagnosis | null;
 }
+
+export interface SlimDiagnosis {
+  id: number;
+  projectId: number;
+  createdAt: string;
+}
