@@ -1,4 +1,4 @@
-import { Diagnosis, DiagnosisItem } from '@/types/types'
+import { Diagnosis, DiagnosisItem, DiagnosisSentenceWeight } from '@/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api, { getErrorMessage } from '../services/api.service'
@@ -16,6 +16,14 @@ export const useDiagnosisStore = defineStore('diagnosis', () => {
 	})
 
 	// Actions
+	interface DiagnosisResponse {
+		id: number
+		projectId: number
+		createdAt: string
+		diagnosisItems: DiagnosisItem[]
+		diagnosisWeights: DiagnosisSentenceWeight[]
+	}
+
 	async function createDiagnosis(projectId: number): Promise<{ success: boolean }> {
 		loading.value = true
 		errorState.value = ''
@@ -25,13 +33,14 @@ export const useDiagnosisStore = defineStore('diagnosis', () => {
 			const diagnosisId = createResponse.data.diagnosisId
 			diagnosisIdByProjectId.value[projectId] = diagnosisId
 
-			const itemsResponse = await api.get<DiagnosisItem[]>(`/diagnosis/${diagnosisId}/items`)
+			const diagnosisResponse = await api.get<DiagnosisResponse>(`/diagnosis/${diagnosisId}`)
+			const d = diagnosisResponse.data
 			diagnosisByProjectId.value[projectId] = {
-				id: diagnosisId,
-				projectId,
-				createdAt: new Date().toISOString(),
-				items: itemsResponse.data,
-				sentenceWeights: [],
+				id: d.id,
+				projectId: d.projectId,
+				createdAt: d.createdAt,
+				items: d.diagnosisItems,
+				sentenceWeights: d.diagnosisWeights,
 			}
 			return { success: true }
 		} catch (error) {
@@ -50,10 +59,14 @@ export const useDiagnosisStore = defineStore('diagnosis', () => {
 		errorState.value = ''
 
 		try {
-			const itemsResponse = await api.get<DiagnosisItem[]>(`/diagnosis/${diagnosisId}`)
+			const diagnosisResponse = await api.get<DiagnosisResponse>(`/diagnosis/${diagnosisId}`)
+			const d = diagnosisResponse.data
 			diagnosisByProjectId.value[projectId] = {
-				...diagnosisByProjectId.value[projectId],
-				items: itemsResponse.data,
+				id: d.id,
+				projectId: d.projectId,
+				createdAt: d.createdAt,
+				items: d.diagnosisItems,
+				sentenceWeights: d.diagnosisWeights,
 			}
 			return { success: true }
 		} catch (error) {
@@ -64,11 +77,34 @@ export const useDiagnosisStore = defineStore('diagnosis', () => {
 		}
 	}
 
+	async function startDiagnosis(projectId: number): Promise<{ success: boolean; diagnosisId?: number }> {
+		loading.value = true
+		errorState.value = ''
+		try {
+			const response = await api.post<{ diagnosisId: number }>(`/diagnosis/${projectId}`)
+			const diagnosisId = response.data.diagnosisId
+			diagnosisIdByProjectId.value[projectId] = diagnosisId
+			return { success: true, diagnosisId }
+		} catch (error) {
+			errorState.value = getErrorMessage(error, 'Failed to start diagnosis')
+			return { success: false }
+		} finally {
+			loading.value = false
+		}
+	}
+
+	async function pollDiagnosisStatus(diagnosisId: number): Promise<'IN_PROGRESS' | 'FINISHED' | 'FAILED'> {
+		const response = await api.get<{ status: 'IN_PROGRESS' | 'FINISHED' | 'FAILED' }>(`/diagnosis/${diagnosisId}/status`)
+		return response.data.status
+	}
+
 	return {
 		getDiagnosisByProjectId,
 		loading,
 		errorState,
 		loadDiagnosis,
 		createDiagnosis,
+		startDiagnosis,
+		pollDiagnosisStatus,
 	}
 })

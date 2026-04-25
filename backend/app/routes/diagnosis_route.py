@@ -77,7 +77,7 @@ def get_diagnosis_list_slim(project_id: int):
 		return jsonify({"error": str(e)}), 500
 
 @bp.route("/diagnosis/<int:diagnosis_id>", methods=["GET"])
-def get_diagnosis(diagnosis_id: int) -> DiagnosisReturn:
+def get_diagnosis_route(diagnosis_id: int) -> DiagnosisReturn:
 	"""
 	Returns the diagnosis and its associated items and sentence weights for the given diagnosis_id
 	Parameters:

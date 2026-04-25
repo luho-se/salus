@@ -27,7 +27,12 @@ const currentAnswer = computed({
 
 onMounted(async () => {
 	await questionStore.loadQuestions(projectId)
-	// Pre-populate answers from existing data
+	const mainQuestions = questions.value.filter(q => q.question !== 'Additional information')
+	const allAnswered = mainQuestions.length > 0 && mainQuestions.every(q => q.answer?.answer != null)
+	if (allAnswered) {
+		router.replace(`/project/${projectId}/summary`)
+		return
+	}
 	for (const q of questions.value) {
 		if (q.answer?.answer != null) {
 			answers.value[q.id] = q.answer.answer
@@ -50,10 +55,10 @@ async function handleSubmit() {
 	}))
 	const result = await questionStore.submitAnswers(projectId, answersArray)
 	if (!result.success) {
-		toast.error(questionStore.errorState || 'Failed to submit answers')
+		toast.error(questionStore.errorState || 'Failed to save answers')
 		return
 	}
-	router.push(`/project/${projectId}`)
+	router.push(`/project/${projectId}/summary`)
 }
 </script>
 
@@ -70,12 +75,8 @@ async function handleSubmit() {
 					Question {{ currentIndex + 1 }} of {{ questions.length }}
 				</span>
 				<div class="flex gap-1">
-					<div
-						v-for="(_, i) in questions"
-						:key="i"
-						class="h-1.5 w-6 rounded-full transition-colors"
-						:class="i <= currentIndex ? 'bg-primary' : 'bg-muted'"
-					/>
+					<div v-for="(_, i) in questions" :key="i" class="h-1.5 w-6 rounded-full transition-colors"
+						:class="i <= currentIndex ? 'bg-primary' : 'bg-muted'" />
 				</div>
 			</div>
 
@@ -88,62 +89,37 @@ async function handleSubmit() {
 				</CardHeader>
 				<CardContent>
 					<!-- text input -->
-					<Input
-						v-if="currentQuestion.inputType === 'text'"
-						v-model="currentAnswer"
-						type="text"
-						placeholder="Your answer..."
-					/>
+					<Input v-if="currentQuestion.inputType === 'text'" v-model="currentAnswer" type="text"
+						placeholder="Your answer..." />
 
 					<!-- number input -->
 					<div v-else-if="currentQuestion.inputType === 'number'" class="flex items-center gap-2">
-						<Input
-							v-model="currentAnswer"
-							type="number"
-							:min="currentQuestion.inputMin ?? undefined"
-							:max="currentQuestion.inputMax ?? undefined"
-							placeholder="0"
-							class="max-w-40"
-						/>
+						<Input v-model="currentAnswer" type="number" :min="currentQuestion.inputMin ?? undefined"
+							:max="currentQuestion.inputMax ?? undefined" placeholder="0" class="max-w-40" />
 						<span v-if="currentQuestion.inputUnit" class="text-sm text-muted-foreground">
 							{{ currentQuestion.inputUnit }}
 						</span>
 					</div>
 
 					<!-- body_location selector -->
-					<BodyLocationSelector
-						v-else-if="currentQuestion.inputType === 'body_location'"
-						v-model="currentAnswer"
-					/>
+					<BodyLocationSelector v-else-if="currentQuestion.inputType === 'body_location'"
+						v-model="currentAnswer" />
 				</CardContent>
 			</Card>
 
 			<!-- Navigation -->
 			<div class="flex justify-between">
-				<Button
-					variant="outline"
-					:disabled="isFirst"
-					class="hover:cursor-pointer"
-					@click="goBack"
-				>
+				<Button variant="outline" :disabled="isFirst" class="hover:cursor-pointer" @click="goBack">
 					Back
 				</Button>
 
-				<Button
-					v-if="!isLast"
-					:disabled="!currentAnswer.trim()"
-					class="hover:cursor-pointer"
-					@click="goNext"
-				>
+				<Button v-if="!isLast" :disabled="!currentAnswer.toString().trim()" class="hover:cursor-pointer"
+					@click="goNext">
 					Next
 				</Button>
-				<Button
-					v-else
-					:disabled="!currentAnswer.trim() || questionStore.loading"
-					class="hover:cursor-pointer"
-					@click="handleSubmit"
-				>
-					Submit
+				<Button v-else :disabled="!currentAnswer.toString().trim() || questionStore.loading"
+					class="hover:cursor-pointer" @click="handleSubmit">
+					Save answers
 				</Button>
 			</div>
 		</template>

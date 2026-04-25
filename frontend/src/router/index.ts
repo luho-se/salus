@@ -2,6 +2,7 @@ import PrivateLayout from '@/layouts/PrivateLayout.vue'
 import HomeView from '@/views/HomeView.vue'
 import ProjectDiagnosisView from '@/views/ProjectDiagnosisView.vue'
 import ProjectQuestionsView from '@/views/ProjectQuestionsView.vue'
+import ProjectSummaryView from '@/views/ProjectSummaryView.vue'
 import ProjectView from '@/views/ProjectView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -27,6 +28,11 @@ const router = createRouter({
 					path: 'project/:id/questions',
 					name: 'project-questions',
 					component: ProjectQuestionsView,
+				},
+				{
+					path: 'project/:id/summary',
+					name: 'project-summary',
+					component: ProjectSummaryView,
 				},
 				{
 					path: 'project/:id/diagnosis',

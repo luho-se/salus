@@ -1,4 +1,4 @@
-import { QuestionWithAnswer } from '@/types/types'
+import { Answer, Question, QuestionWithAnswer } from '@/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api, { getErrorMessage } from '../services/api.service'
@@ -20,8 +20,17 @@ export const useQuestionStore = defineStore('question', () => {
 		errorState.value = ''
 
 		try {
-			const response = await api.get<QuestionWithAnswer[]>(`/questions/${projectId}`)
-			questionsByProjectId.value[projectId] = response.data
+			const [questionsRes, answersRes] = await Promise.all([
+				api.get<Question[]>(`/questions/${projectId}`),
+				api.get<Answer[]>(`/answers/${projectId}`),
+			])
+			const answersByQuestionId = Object.fromEntries(
+				answersRes.data.map((a) => [a.questionId, a]),
+			)
+			questionsByProjectId.value[projectId] = questionsRes.data.map((q) => ({
+				...q,
+				answer: answersByQuestionId[q.id] ?? null,
+			}))
 			return { success: true }
 		} catch (error) {
 			errorState.value = getErrorMessage(error, 'Failed to load questions')
@@ -51,11 +60,29 @@ export const useQuestionStore = defineStore('question', () => {
 		}
 	}
 
+	function setQuestions(projectId: number, questions: Question[]): void {
+		questionsByProjectId.value[projectId] = questions.map((q) => ({ ...q, answer: null }))
+	}
+
+	async function saveAdditionalInfo(
+		projectId: number,
+		answer: string,
+	): Promise<{ success: boolean }> {
+		try {
+			await api.post(`/projects/${projectId}/additional_info`, { answer })
+			return { success: true }
+		} catch (error) {
+			return { success: false }
+		}
+	}
+
 	return {
 		getQuestionsByProjectId,
 		loading,
 		errorState,
 		loadQuestions,
 		submitAnswers,
+		setQuestions,
+		saveAdditionalInfo,
 	}
 })

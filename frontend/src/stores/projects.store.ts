@@ -1,7 +1,8 @@
-import { Project } from '@/types/types'
+import { Project, Question } from '@/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api, { getErrorMessage } from "../services/api.service";
+import { useQuestionStore } from './questions.store'
 
 export const useProjectStore = defineStore('project', () => {
 	// State
@@ -61,8 +62,9 @@ export const useProjectStore = defineStore('project', () => {
 		errorState.value = "";
 
 		try {
-			const response = await api.patch<Project>(`/projects/${projectId}`, { initialPrompt: prompt })
-			projectsById.value[projectId] = response.data
+			const response = await api.post<{ questions: Question[] }>(`/projects/${projectId}/generate_questions`, { text: prompt })
+			useQuestionStore().setQuestions(projectId, response.data.questions)
+			await loadProject(projectId)
 			return {success: true}
 		} catch (error) {
 			errorState.value = getErrorMessage(error, "Failed to submit prompt");
