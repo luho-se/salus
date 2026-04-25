@@ -1,4 +1,8 @@
 import PrivateLayout from '@/layouts/PrivateLayout.vue'
+import HomeView from '@/views/HomeView.vue'
+import ProjectDiagnosisView from '@/views/ProjectDiagnosisView.vue'
+import ProjectQuestionsView from '@/views/ProjectQuestionsView.vue'
+import ProjectView from '@/views/ProjectView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -6,64 +10,32 @@ const router = createRouter({
 	routes: [
 		{
 			path: '/',
-			name: '',
+			name: 'app',
 			component: PrivateLayout,
 			children: [
 				{
 					path: 'home',
 					name: 'home',
-					component: RecipesView,
+					component: HomeView,
 				},
 				{
 					path: 'project/:id',
 					name: 'project',
-					component: IngredientsView,
+					component: ProjectView,
 				},
 				{
 					path: 'project/:id/questions',
 					name: 'project-questions',
-					component: RecipeEditView,
+					component: ProjectQuestionsView,
 				},
 				{
 					path: 'project/:id/diagnosis',
 					name: 'project-diagnosis',
-					component: RecipeEditView,
+					component: ProjectDiagnosisView,
 				},
 			],
 		}
 	],
-})
-
-// Navigation guard
-router.beforeEach(async (to, from, next) => {
-	const authStore = useAuthStore()
-	await authStore.checkAuth()
-	// Check for illegal route configuration
-	if (to.meta.requiresAuth && to.meta.redirectIfAuthenticated) {
-		console.error('Route config error: Route cannot require auth and redirect if authenticated')
-		next('/login')
-		return
-	}
-
-	// Redirect unauthenticated users from private routes
-	if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-		next('/login')
-		return
-	}
-
-	// Redirect authenticated users from public routes with redirectIfAuthenticated
-	if (to.meta.redirectIfAuthenticated && authStore.isAuthenticated) {
-		next('/app/recipes')
-		return
-	}
-
-	// Check that we actually enter a valid site and not a "page parent"
-	if (to.name === 'app') {
-		next('/app/recipes')
-		return
-	}
-
-	next()
 })
 
 export default router

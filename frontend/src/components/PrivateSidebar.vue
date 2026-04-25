@@ -2,20 +2,20 @@
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from './ui/sidebar';
-import { CookingPot, Carrot, LogOut } from 'lucide-vue-next';
+import { CookingPot, Carrot, LogOut, LayoutGrid } from 'lucide-vue-next';
 
 const router = useRouter()
 
-
+// @todo check
 const menuItems = [
 	{
-		title: "Recipes",
-		toName: "recipes",
+		title: "Project 1",
+		projectId: 1,
 		icon: CookingPot
 	},
 	{
-		title: "Ingredients",
-		toName: "ingredients",
+		title: "Project 2",
+		projectId: 2,
 		icon: Carrot
 	}
 
@@ -62,8 +62,26 @@ const handleSidebarClick = (e: MouseEvent) => {
 				<SidebarGroupLabel>Navigation</SidebarGroupLabel>
 				<SidebarGroupContent>
 					<SidebarMenu>
+						<SidebarMenuItem>
+							<RouterLink :to="{ name: 'home' }" as-child>
+								<SidebarMenuButton as-child class="hover:bg-light-gold-200 cursor-pointer">
+									<div>
+										<LayoutGrid />
+										<span>All projects</span>
+									</div>
+								</SidebarMenuButton>
+							</RouterLink>
+						</SidebarMenuItem>
+					</SidebarMenu>
+				</SidebarGroupContent>
+
+			</SidebarGroup>
+			<SidebarGroup>
+				<SidebarGroupLabel>Recent</SidebarGroupLabel>
+				<SidebarGroupContent>
+					<SidebarMenu>
 						<SidebarMenuItem v-for="item in menuItems" :key="item.title">
-							<RouterLink :to="{ name: item.toName }" as-child>
+							<RouterLink :to="{ name: 'project', params: { id: item.projectId } }" as-child>
 								<SidebarMenuButton as-child class="hover:bg-light-gold-200 cursor-pointer">
 									<div>
 										<component :is="item.icon" />
@@ -76,18 +94,6 @@ const handleSidebarClick = (e: MouseEvent) => {
 				</SidebarGroupContent>
 			</SidebarGroup>
 		</SidebarContent>
-		<SidebarFooter class="bg-light-gold-100">
-			<SidebarMenu>
-				<SidebarMenuItem>
-					<SidebarMenuButton as-child class="hover:bg-light-gold-200 cursor-pointer">
-						<div>
-							<LogOut />
-							<span>Logout</span>
-						</div>
-					</SidebarMenuButton>
-				</SidebarMenuItem>
-			</SidebarMenu>
-		</SidebarFooter>
 		<SidebarRail />
 	</Sidebar>
 </template>
