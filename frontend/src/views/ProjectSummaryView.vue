@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useQuestionStore } from '@/stores/questions.store'
 import { QuestionWithAnswer } from '@/types/types'
-import { Pencil, Check, X } from 'lucide-vue-next'
+import { Pencil, Check, X, AlertCircle } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -31,6 +31,9 @@ const editValue = ref('')
 const diagnosisStatus = ref<'IDLE' | 'IN_PROGRESS' | 'FINISHED' | 'FAILED'>('IDLE')
 const diagnosisId = ref<number | null>(null)
 let pollInterval: ReturnType<typeof setInterval> | null = null
+
+const followUpRecommended = ref<boolean | null>(null)
+const generatingFollowUp = ref(false)
 
 const latestDiagnosis = computed(() => {
 	const list = diagnosisStore.getDiagnosisListByProjectId(projectId)
@@ -79,6 +82,23 @@ async function saveEdit(q: QuestionWithAnswer) {
 		return
 	}
 	editingId.value = null
+}
+
+async function handleGenerateFollowUp() {
+	generatingFollowUp.value = true
+	const result = await questionStore.generateFollowUpQuestions(projectId)
+	generatingFollowUp.value = false
+	if (!result.success) {
+		toast.error(questionStore.errorState || 'Failed to generate follow-up questions')
+		return
+	}
+	if (result.needsMoreQuestions) {
+		followUpRecommended.value = true
+		router.push(`/project/${projectId}/questions`)
+	} else {
+		followUpRecommended.value = false
+		toast.info('No additional questions needed — you can proceed with diagnosis.')
+	}
 }
 
 async function handleStartDiagnosis() {
@@ -194,8 +214,29 @@ async function handleStartDiagnosis() {
 				</Card>
 			</div>
 
-			<!-- Start Diagnosis -->
-			<div class="flex justify-end pt-2">
+			<!-- Follow-up recommendation banner -->
+			<div v-if="followUpRecommended === true"
+				class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+				<AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+				<p>The AI recommends answering more targeted questions to improve diagnosis accuracy. Follow-up questions have been added.</p>
+			</div>
+			<div v-else-if="followUpRecommended === false"
+				class="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+				<Check class="mt-0.5 h-4 w-4 shrink-0" />
+				<p>The AI determined that your current answers are sufficient for a reliable diagnosis.</p>
+			</div>
+
+			<!-- Actions -->
+			<div class="flex justify-between items-center pt-2">
+				<Button variant="outline" :disabled="generatingFollowUp || diagnosisStatus === 'IN_PROGRESS'" class="hover:cursor-pointer" @click="handleGenerateFollowUp">
+					<template v-if="generatingFollowUp">
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+						Checking…
+					</template>
+					<template v-else>
+						Generate follow-up questions
+					</template>
+				</Button>
 				<Button :disabled="!canStartDiagnosis || diagnosisStore.loading" class="hover:cursor-pointer" @click="handleStartDiagnosis">
 					Start Diagnosis
 				</Button>
