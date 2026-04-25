@@ -64,6 +64,18 @@ export const useQuestionStore = defineStore('question', () => {
 		questionsByProjectId.value[projectId] = questions.map((q) => ({ ...q, answer: null }))
 	}
 
+	async function saveAdditionalInfo(
+		projectId: number,
+		answer: string,
+	): Promise<{ success: boolean }> {
+		try {
+			await api.post(`/projects/${projectId}/additional_info`, { answer })
+			return { success: true }
+		} catch (error) {
+			return { success: false }
+		}
+	}
+
 	return {
 		getQuestionsByProjectId,
 		loading,
@@ -71,5 +83,6 @@ export const useQuestionStore = defineStore('question', () => {
 		loadQuestions,
 		submitAnswers,
 		setQuestions,
+		saveAdditionalInfo,
 	}
 })
