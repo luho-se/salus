@@ -77,11 +77,34 @@ export const useDiagnosisStore = defineStore('diagnosis', () => {
 		}
 	}
 
+	async function startDiagnosis(projectId: number): Promise<{ success: boolean; diagnosisId?: number }> {
+		loading.value = true
+		errorState.value = ''
+		try {
+			const response = await api.post<{ diagnosisId: number }>(`/diagnosis/${projectId}`)
+			const diagnosisId = response.data.diagnosisId
+			diagnosisIdByProjectId.value[projectId] = diagnosisId
+			return { success: true, diagnosisId }
+		} catch (error) {
+			errorState.value = getErrorMessage(error, 'Failed to start diagnosis')
+			return { success: false }
+		} finally {
+			loading.value = false
+		}
+	}
+
+	async function pollDiagnosisStatus(diagnosisId: number): Promise<'IN_PROGRESS' | 'FINISHED' | 'FAILED'> {
+		const response = await api.get<{ status: 'IN_PROGRESS' | 'FINISHED' | 'FAILED' }>(`/diagnosis/${diagnosisId}/status`)
+		return response.data.status
+	}
+
 	return {
 		getDiagnosisByProjectId,
 		loading,
 		errorState,
 		loadDiagnosis,
 		createDiagnosis,
+		startDiagnosis,
+		pollDiagnosisStatus,
 	}
 })
