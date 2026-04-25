@@ -293,23 +293,28 @@ def save_diagnosis_sentence_weights(diagnosis_id: int, attribution: dict, answer
 	Returns:
 		bool: True if successful, False otherwise
 	"""
-	answer_map = {a["question_id"]: a["answer"] for a in answers}
+	# Use int keys — llmSHAP may return string keys after internal JSON processing
+	answer_map = {int(a["question_id"]): a["answer"] for a in answers}
 	try:
 		db: Connection[dict[str, Any]] = get_db()
 		with db.cursor(row_factory=dict_row) as cur:
 			for question_id, weight in attribution.items():
-				answer_text = answer_map.get(question_id)
+				qid = int(question_id)
+				answer_text = answer_map.get(qid)
+				if answer_text is None:
+					print(f"Warning: no answer found for question_id={qid}, skipping weight")
+					continue
 				cur.execute(
 					"""
-					INSERT INTO diagnosis_sentence_weight (diagnosis_id, question_id, sentence, weight)
+					INSERT INTO diagnosis_sentence_weight (diagnosis_id, question_id, answer, sentence_weight)
 					VALUES (%s, %s, %s, %s);
 					""",
-					(diagnosis_id, question_id, answer_text, weight)
+					(diagnosis_id, qid, answer_text, float(weight))
 				)
 		db.commit()
 		return True
 	except PsycopgError as e:
-		print(f"Database error: {e}")
+		print(f"Database error saving sentence weights: {e}")
 		db.rollback()
 		return False
 
