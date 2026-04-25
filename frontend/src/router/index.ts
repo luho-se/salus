@@ -35,7 +35,7 @@ const router = createRouter({
 					component: ProjectSummaryView,
 				},
 				{
-					path: 'project/:id/diagnosis',
+					path: 'project/:id/diagnosis/:diagnosisId',
 					name: 'project-diagnosis',
 					component: ProjectDiagnosisView,
 				},
