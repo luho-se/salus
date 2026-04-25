@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Sparkles } from 'lucide-vue-next'
 import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useQuestionStore } from '@/stores/questions.store'
 import { QuestionWithAnswer } from '@/types/types'
@@ -121,7 +122,21 @@ async function handleStartDiagnosis() {
 				<Card v-for="q in questions" :key="q.id">
 					<CardHeader class="pb-2">
 						<div class="flex items-start justify-between gap-4">
-							<CardTitle class="text-sm font-medium text-muted-foreground">{{ q.question }}</CardTitle>
+							<div class="flex items-center gap-2 flex-wrap">
+								<CardTitle class="text-sm font-medium text-muted-foreground">{{ q.question }}</CardTitle>
+								<TooltipProvider v-if="q.answer?.llmGenerated">
+									<Tooltip>
+										<TooltipTrigger as-child>
+											<span class="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 font-medium cursor-default select-none">
+												<Sparkles class="w-3 h-3" />AI
+											</span>
+										</TooltipTrigger>
+										<TooltipContent class="max-w-56 text-center">
+											This answer was extracted by AI from your initial description. You can edit it if needed.
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+							</div>
 							<button v-if="editingId !== q.id"
 								class="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
 								@click="startEdit(q)">
