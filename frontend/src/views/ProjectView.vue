@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useProjectStore } from '@/stores/projects.store'
+import { ChevronRight } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -9,22 +12,43 @@ import { toast } from 'vue-sonner'
 const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
+const diagnosisStore = useDiagnosisStore()
 
-const projectId = Number(route.params.id)
+const projectId = computed(() => Number(route.params.id))
 const prompt = ref('')
+const generating = ref(false)
 
-const project = computed(() => projectStore.getProjectById(projectId))
+const project = computed(() => projectStore.getProjectById(projectId.value))
+const diagnosisList = computed(() => diagnosisStore.getDiagnosisListByProjectId(projectId.value))
 
-onMounted(() => projectStore.loadProject(projectId))
+onMounted(async () => {
+	await projectStore.loadProject(projectId.value)
+	if (project.value?.step !== 'INITIAL_PROMPT') {
+		diagnosisStore.fetchDiagnosisList(projectId.value)
+	}
+})
 
 async function handleSubmitPrompt() {
+	const projectIdSnapshot = projectId.value
 	if (!prompt.value.trim()) return
-	const result = await projectStore.submitInitialPrompt(projectId, prompt.value.trim())
+	generating.value = true
+	const result = await projectStore.submitInitialPrompt(projectIdSnapshot, prompt.value.trim())
+	generating.value = false
 	if (!result.success) {
 		toast.error(projectStore.errorState || 'Failed to submit prompt')
 		return
 	}
-	router.push(`/project/${projectId}/questions`)
+	router.push(`/project/${projectIdSnapshot}/questions`)
+}
+
+function formatDiagnosisDate(iso: string): string {
+	return new Date(iso).toLocaleString(undefined, {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+	})
 }
 </script>
 
@@ -39,50 +63,71 @@ async function handleSubmitPrompt() {
 
 			<!-- INITIAL_PROMPT: enter the prompt -->
 			<template v-if="project.step === 'INITIAL_PROMPT'">
-				<div class="flex flex-col gap-4">
-					<p class="text-muted-foreground">Describe your situation in as much detail as you can. We'll use this to generate targeted questions.</p>
-					<textarea
-						v-model="prompt"
-						rows="6"
+				<template v-if="generating">
+					<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+						<div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+						<p>Analysing your description and generating questions…</p>
+					</div>
+				</template>
+
+				<template v-else>
+					<p class="text-muted-foreground">Describe your situation in as much detail as you can. We'll use
+						this to generate targeted questions.</p>
+					<textarea v-model="prompt" rows="6"
 						placeholder="e.g. I've had a sharp pain in my lower left leg for two weeks, mainly when walking..."
-						class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-					/>
+						class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
 					<div class="flex justify-end">
-						<Button
-							:disabled="!prompt.trim() || projectStore.loading"
-							class="hover:cursor-pointer"
-							@click="handleSubmitPrompt"
-						>
+						<Button :disabled="!prompt.trim()" class="hover:cursor-pointer" @click="handleSubmitPrompt">
 							Analyse
 						</Button>
 					</div>
-				</div>
+				</template>
 			</template>
 
-			<!-- INITIAL_QUESTIONS / DIAGNOSIS: read-only prompt + action -->
+			<!-- Post-prompt: description card + actions + diagnosis history -->
 			<template v-else>
 				<Card>
-					<CardContent class="pt-6">
-						<p class="text-sm text-muted-foreground whitespace-pre-wrap">{{ project.initialPrompt }}</p>
+					<CardHeader>
+						<CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+							Your description
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<p class="text-sm leading-relaxed whitespace-pre-wrap">{{ project.initialPrompt }}</p>
 					</CardContent>
 				</Card>
 
 				<div class="flex justify-end">
-					<Button
-						v-if="project.step === 'INITIAL_QUESTIONS'"
-						class="hover:cursor-pointer"
-						@click="router.push(`/project/${projectId}/questions`)"
-					>
-						Answer questions
-					</Button>
-					<Button
-						v-else-if="project.step === 'DIAGNOSIS'"
-						class="hover:cursor-pointer"
-						@click="router.push(`/project/${projectId}/diagnosis`)"
-					>
-						View diagnosis
+					<Button class="hover:cursor-pointer"
+						@click="router.push(`/project/${projectId}/summary`)">
+						Question summary
 					</Button>
 				</div>
+
+				<!-- Diagnosis history -->
+				<template v-if="diagnosisList.length">
+					<Separator />
+					<div class="flex flex-col gap-2">
+						<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+							Previous diagnoses
+						</p>
+						<div
+							v-for="(d, i) in diagnosisList"
+							:key="d.id"
+							class="flex items-center justify-between px-3 py-2.5 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+							@click="router.push(`/project/${projectId}/diagnosis/${d.id}`)"
+						>
+							<div class="flex items-center gap-2">
+								<span class="text-sm">{{ formatDiagnosisDate(d.createdAt) }}</span>
+								<span v-if="i === 0"
+									class="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+									Latest
+								</span>
+							</div>
+							<ChevronRight class="w-4 h-4 text-muted-foreground" />
+						</div>
+					</div>
+				</template>
 			</template>
 		</template>
 	</div>

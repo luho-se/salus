@@ -12,14 +12,21 @@ const router = useRouter()
 const diagnosisStore = useDiagnosisStore()
 
 const projectId = Number(route.params.id)
-const diagnosis = computed(() => diagnosisStore.getDiagnosisByProjectId(projectId))
+const diagnosisId = Number(route.params.diagnosisId)
+const diagnosis = computed(() => diagnosisStore.getDiagnosisByDiagnosisId(diagnosisId))
 
 onMounted(async () => {
-	const result = await diagnosisStore.createDiagnosis(projectId)
+	const result = await diagnosisStore.loadDiagnosisByDiagnosisId(diagnosisId)
 	if (!result.success) {
-		toast.error(diagnosisStore.errorState || 'Failed to generate diagnosis')
+		toast.error(diagnosisStore.errorState || 'Failed to load diagnosis')
 	}
 })
+
+const probabilityLabel: Record<DiagnosisItemProbability, string> = {
+	LOW: 'Low probability',
+	MEDIUM: 'Medium probability',
+	HIGH: 'High probability',
+}
 
 const probabilityStyle: Record<DiagnosisItemProbability, string> = {
 	LOW: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -53,7 +60,7 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 		<template v-if="diagnosisStore.loading">
 			<div class="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
 				<div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-				<p>Generating your diagnosis — this may take a moment…</p>
+				<p>Loading diagnosis…</p>
 			</div>
 		</template>
 
@@ -64,10 +71,10 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 					<CardHeader>
 						<div class="flex items-start justify-between gap-4">
 							<CardTitle class="text-lg">{{ item.title }}</CardTitle>
-							<div class="flex gap-2 shrink-0">
+							<div class="flex flex-col gap-1 items-end shrink-0">
 								<span class="text-xs font-medium px-2 py-0.5 rounded-full"
 									:class="probabilityStyle[item.probability]">
-									{{ item.probability }}
+									{{ probabilityLabel[item.probability] }}
 								</span>
 								<span class="text-xs font-medium px-2 py-0.5 rounded-full"
 									:class="careTypeStyle[item.careType]">
@@ -82,13 +89,16 @@ const careTypeStyle: Record<DiagnosisCareType, string> = {
 							<p class="text-sm">{{ item.motivation }}</p>
 						</div>
 						<div>
-							<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-								Recommendations</p>
+							<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Recommendations</p>
 							<p class="text-sm">{{ item.recommendations }}</p>
 						</div>
 					</CardContent>
 				</Card>
 			</div>
+		</template>
+
+		<template v-else-if="!diagnosisStore.loading">
+			<p class="text-muted-foreground">Diagnosis not found.</p>
 		</template>
 	</div>
 </template>

@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, current_app, jsonify, request, Response
 from typing import Optional
 import threading
 
@@ -7,12 +7,16 @@ from ..services.diagnosis_service import get_diagnosis
 from ..services.diagnosis_service import get_diagnosis_items
 from ..services.diagnosis_service import get_diagnosis_list
 from ..services.diagnosis_service import get_diagnosis_sentence_weights
+from ..services.diagnosis_service import get_diagnosis_status as get_diagnosis_status_service
 from ..services.diagnosis_service import save_diagnosis
 from ..services.diagnosis_service import create_diagnosis_status
 from ..services.diagnosis_service import DiagnosisItem
 from ..services.diagnosis_service import Diagnosis
 from ..services.diagnosis_service import DiagnosisReturn
 from ..services.diagnosis_service import DiagnosisSentenceWeight
+from ..services.projects_service import get_project as get_project_service
+from ..services.questions_service import get_questions as get_questions_service
+from ..services.questions_service import get_answers as get_answers_service
 
 
 bp = Blueprint("diagnostic", __name__)
@@ -28,19 +32,38 @@ def generate_diagnosis(project_id: int):
 		diagnosis_id (int)
 	"""
 	try:
+		project = get_project_service(project_id)
+		if project is None:
+			return jsonify({"error": "Project not found"}), 404
+
+		questions = get_questions_service(project_id)
+		main_questions = [q for q in questions if q["question"] != "Additional information"]
+		if not main_questions:
+			return jsonify({"error": "No questions found — generate questions first"}), 400
+
+		answers = get_answers_service(project_id)
+		answered_ids = {a["question_id"] for a in answers if a.get("answer")}
+		unanswered = [q for q in main_questions if q["id"] not in answered_ids]
+		if unanswered:
+			return jsonify({"error": "All questions must be answered before starting a diagnosis"}), 400
 
 		diagnosis_id: int = save_diagnosis(project_id)
 		if diagnosis_id is None:
 			return jsonify({"error": "Failed during diagnosis initialization"}), 500
 		create_diagnosis_status(project_id, diagnosis_id)
-		thread=threading.Thread(target=create_diagnosis, args=(project_id, diagnosis_id), daemon=True)
+		app = current_app._get_current_object()
+		def run_in_context():
+			with app.app_context():
+				create_diagnosis(project_id, diagnosis_id)
+		thread = threading.Thread(target=run_in_context, daemon=True)
+		thread.start()
 		return jsonify({"diagnosis_id": diagnosis_id}), 200
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
 
 @bp.route("/diagnosis/<int:diagnosis_id>/status", methods=["GET"])
-def get_diagnosis_status(diagnosis_id: int):
+def diagnosis_status_route(diagnosis_id: int):
 	"""
 	Returns the status of the diagnosis job for the given diagnosis_id
 	Parameters:
@@ -49,10 +72,10 @@ def get_diagnosis_status(diagnosis_id: int):
 		DiagnosisJobStatus or None if not found or on error
 	"""
 	try:
-		status: Optional[DiagnosisJobStatus] = get_diagnosis_status(diagnosis_id)
+		status: Optional[DiagnosisJobStatus] = get_diagnosis_status_service(diagnosis_id)
 		if status is None:
 			return jsonify({"error": "Diagnosis status not found"}), 404
-		return jsonify({"status": status.value}), 200
+		return jsonify({"status": status}), 200
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
 
@@ -67,11 +90,7 @@ def get_diagnosis_list_slim(project_id: int):
 		List of diagnosis (id, project_id, created_at)
 	"""
 	try:
-		diagnoses: list[Diagnosis] = get_diagnosis_list(project_id)
-
-		if diagnoses is None:
-			return jsonify({"error": "No diagnoses found for this project"}), 404
-		
+		diagnoses = get_diagnosis_list(project_id)
 		return jsonify({"diagnoses": diagnoses}), 200
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
@@ -90,8 +109,8 @@ def get_diagnosis_route(diagnosis_id: int) -> DiagnosisReturn:
 		items: list[DiagnosisItem] = get_diagnosis_items(diagnosis_id)
 		weights: list[DiagnosisSentenceWeight] = get_diagnosis_sentence_weights(diagnosis_id)
 		
-		if diagnosis is None or items is None or weights is None:
-			return jsonify({"error": "Diagnosis not available"}), 404
+		if diagnosis is None:
+			return jsonify({"error": "Diagnosis not found"}), 404
 
 		res: DiagnosisReturn = {
 			"id": diagnosis["id"],

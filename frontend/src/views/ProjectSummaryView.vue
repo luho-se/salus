@@ -32,8 +32,25 @@ const diagnosisStatus = ref<'IDLE' | 'IN_PROGRESS' | 'FINISHED' | 'FAILED'>('IDL
 const diagnosisId = ref<number | null>(null)
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
+const latestDiagnosis = computed(() => {
+	const list = diagnosisStore.getDiagnosisListByProjectId(projectId)
+	return list.length > 0 ? list[0] : null
+})
+
+const canStartDiagnosis = computed(() => {
+	if (diagnosisStatus.value === 'IN_PROGRESS') return false
+	const answeredQs = allQuestions.value.filter((q) => q.answer?.answer != null)
+	if (answeredQs.length === 0) return false
+	if (!latestDiagnosis.value) return true
+	const lastDiagAt = new Date(latestDiagnosis.value.createdAt).getTime()
+	return answeredQs.some((q) => new Date(q.answer!.updatedAt).getTime() > lastDiagAt)
+})
+
 onMounted(async () => {
-	await questionStore.loadQuestions(projectId)
+	await Promise.all([
+		questionStore.loadQuestions(projectId),
+		diagnosisStore.fetchDiagnosisList(projectId),
+	])
 	if (additionalInfoQuestion.value?.answer?.answer) {
 		additionalInfo.value = additionalInfoQuestion.value.answer.answer
 	}
@@ -84,17 +101,17 @@ async function handleStartDiagnosis() {
 			diagnosisStatus.value = status
 			if (status === 'FINISHED') {
 				clearInterval(pollInterval!)
-				await diagnosisStore.loadDiagnosis(projectId)
-				router.push(`/project/${projectId}/diagnosis`)
+				await diagnosisStore.fetchDiagnosisList(projectId)
+				router.push(`/project/${projectId}/diagnosis/${diagnosisId.value}`)
 			} else if (status === 'FAILED') {
 				clearInterval(pollInterval!)
+				diagnosisStatus.value = 'FAILED'
 				toast.error('Diagnosis failed. Please try again.')
 			}
-		} catch {
-			// Status endpoint not yet implemented — navigate directly
+		} catch (e) {
 			clearInterval(pollInterval!)
-			await diagnosisStore.loadDiagnosis(projectId)
-			router.push(`/project/${projectId}/diagnosis`)
+			diagnosisStatus.value = 'FAILED'
+			toast.error('Lost contact with the diagnosis service. Please try again.')
 		}
 	}, 3000)
 }
@@ -179,7 +196,7 @@ async function handleStartDiagnosis() {
 
 			<!-- Start Diagnosis -->
 			<div class="flex justify-end pt-2">
-				<Button :disabled="diagnosisStore.loading" class="hover:cursor-pointer" @click="handleStartDiagnosis">
+				<Button :disabled="!canStartDiagnosis || diagnosisStore.loading" class="hover:cursor-pointer" @click="handleStartDiagnosis">
 					Start Diagnosis
 				</Button>
 			</div>

@@ -34,7 +34,7 @@ class LLMShapService:
 		if self.data is None:
 			raise ValueError("No data provided for diagnosis")
 
-		self.dh = DataHandler(self.data)
+		self.dh = DataHandler(data=self.data)
 		self.codec = BasicPromptCodec(system=self.config.system_instruction)
 		self.llm_interface = OpenAIInterface(model_name="gpt-4o-mini")
 		self.shapley = ShapleyAttribution(
@@ -42,7 +42,7 @@ class LLMShapService:
 			prompt_codec=self.codec,
 			model=self.llm_interface,
 			use_cache=True,
-			num_threads=2
+			num_threads=8
 		)
 		self.results = self.shapley.attribution()	
 		return self.results.output, self.results.attribution
