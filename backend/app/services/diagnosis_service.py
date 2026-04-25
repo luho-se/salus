@@ -109,7 +109,7 @@ def create_diagnosis(project_id: int, diagnosis_id: int) -> None:
 		diagnosis, attribution = llmshap_service.compute_diagnosis(data)
 
 		save_diagnosis_items(diagnosis_id, diagnosis)
-		save_diagnosis_sentence_weights(diagnosis_id, attribution)
+		save_diagnosis_sentence_weights(diagnosis_id, attribution, answers)
 		update_diagnosis_status(diagnosis_id, DiagnosisJobStatus.COMPLETED.value)
 		return
 	except Exception as e:
