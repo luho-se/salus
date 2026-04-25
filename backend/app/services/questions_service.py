@@ -30,15 +30,10 @@ def load_prompt():
 	return PROMPT_PATH.read_text()
 
 
-def generate_questions(text, categories=None):
-	categories = categories or []
+def generate_questions(text):
 
 	system_prompt = load_prompt()
-	user_input = f"""Description:
-{text}
-
-Symptom Categories:
-{", ".join(categories) if categories else "None"}"""
+	user_input = f"""Description: {text}"""
 
 	response = client.chat.completions.create(
 		model="gpt-4o-mini",
