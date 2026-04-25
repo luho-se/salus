@@ -7,6 +7,7 @@ from ..services.questions_service import (
     get_questions as get_questions_service,
     save_answers as save_answers_service,
     get_answers as get_answers_service,
+    save_additional_info as save_additional_info_service,
 )
 
 
@@ -42,5 +43,16 @@ def get_answers(project_id):
     try:
         answers = get_answers_service(project_id)
         return jsonify(answers), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/projects/<int:project_id>/additional_info", methods=["POST"])
+def save_additional_info(project_id):
+    data = request.get_json()
+    answer = data.get("answer", "")
+    try:
+        save_additional_info_service(project_id, answer)
+        return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
