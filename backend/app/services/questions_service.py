@@ -67,6 +67,8 @@ def save_questions(project_id: int, questions: List[Question]) -> bool:
 	Returns:
 		True if successful, raises Exception otherwise.
 	"""
+	conn = g.db
+
 
 	if not questions:
 		return True 

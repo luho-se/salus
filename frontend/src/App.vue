@@ -1,44 +1,23 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import TaskForm from "./components/TaskForm.vue";
-import TaskList from "./components/TaskList.vue";
-import { useTasksStore } from "./stores/tasks.store";
+import { Toaster } from '@/components/ui/sonner'
+import 'vue-sonner/style.css'
+import { RouterView } from 'vue-router';
 
-const tasksStore = useTasksStore();
+document.documentElement.classList.toggle(
+	"dark",
+	localStorage.theme === "dark" ||
+	(!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches),
+);
+// Whenever the user explicitly chooses light mode
+localStorage.theme = "light";
+// Whenever the user explicitly chooses dark mode
+localStorage.theme = "dark";
+// Whenever the user explicitly chooses to respect the OS preference
+localStorage.removeItem("theme");
 
-onMounted(() => {
-	tasksStore.fetchTasks();
-});
 </script>
 
 <template>
-	<main class="container">
-		<h1>Hackathon Template: Tasks</h1>
-		<p class="subtitle">Flask + PostgreSQL + Vue + Pinia</p>
-		<TaskForm />
-
-		<p v-if="tasksStore.loading">Loading tasks...</p>
-		<p v-if="tasksStore.error" class="error">{{ tasksStore.error }}</p>
-		<TaskList :tasks="tasksStore.tasks" />
-	</main>
+	<Toaster position="bottom-right" rich-colors />
+	<RouterView class="h-full" />
 </template>
-
-<style scoped>
-.container {
-	max-width: 800px;
-	margin: 2rem auto;
-	padding: 0 1rem;
-	display: grid;
-	gap: 1rem;
-	font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.subtitle {
-	margin-top: -0.5rem;
-	color: #6b7280;
-}
-
-.error {
-	color: #ef4444;
-}
-</style>
