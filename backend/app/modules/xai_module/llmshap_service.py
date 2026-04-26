@@ -47,16 +47,3 @@ class LLMShapService:
 		self.results = self.shapley.attribution()	
 		return self.results.output, self.results.attribution
 
-if __name__ == "__main__":
-	config = LLMShapConfig(
-		system_instruction="You are a helpful assistant for debugging machine learning models. You will be given a prediction and the input features that led to that prediction. Your task is to identify which features were most influential in the model's decision and provide insights into why the model made that prediction.",
-		permanent_keys=[],
-		exclude_permanent_keys=False
-	)
-	service = LLMShapService(config)
-	data = {
-		"question1": "What is the capital of France? answer: Paris",
-		"question2": "What is the largest mammal? answer: squirrel",
-	}
-	service.compute_diagnosis(data)
-	print(service.compute_diagnosis())
