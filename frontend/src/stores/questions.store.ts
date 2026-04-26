@@ -46,7 +46,6 @@ export const useQuestionStore = defineStore('question', () => {
 	): Promise<{ success: boolean }> {
 		loading.value = true
 		errorState.value = ''
-		// @todo use generate questions endpoint
 		try {
 			await api.post(`/answers/${projectId}`, { answers })
 			// Re-fetch to get updated answer state
