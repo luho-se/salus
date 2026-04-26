@@ -21,16 +21,19 @@ def get_pool() -> ConnectionPool[Any]:
 
 def get_db() -> psycopg.Connection[dict[str, Any]]:
     if "db" not in g:
-        g.db = get_pool().getconn()
+        p = get_pool()
+        g.db = p.getconn()
+        g.db_pool = p
     return g.db
 
 
 def close_db(_: BaseException | None = None) -> None:
     db = g.pop("db", None)
-    if db is not None:
-        if db.info.transaction_status != 0:  # 0 = IDLE, anything else = open transaction
+    p = g.pop("db_pool", None)
+    if db is not None and p is not None:
+        if db.info.transaction_status != 0:
             db.rollback()
-        get_pool().putconn(db)
+        p.putconn(db)
 
 
 def _close_pool() -> None:
