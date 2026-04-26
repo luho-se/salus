@@ -74,7 +74,7 @@ def generate_questions(project_id):
     try:
         result = generate_questions_service(text)
 
-        # Save extracted Q&A pairs (answers pre-filled by AI from the initial prompt)
+        # Save extracted Q&A pairs (LLM-generated answers from the initial prompt)
         extracted = result.get("extracted", [])
         if extracted:
             extracted_questions = [

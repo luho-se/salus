@@ -25,6 +25,7 @@ export interface Answer {
   projectId: number;
   questionId: number;
   answer: string | null;
+  llmGenerated: boolean;
   updatedAt: string;
   createdAt: string;
 }

@@ -43,6 +43,7 @@ Rules:
 - Set "is_extracted": true for all extracted items
 - Extract answers as close to the original wording as possible
 - Do NOT paraphrase or reinterpret extracted answers
+- If the extracted question has input_type "body_location", the answer MUST be one of the predefined body part labels listed below — do NOT use natural language descriptions like "lower back" or "left shoulder". Map the described location to the closest matching label (e.g. "lower back" → "loin", "left shoulder" → "shoulder-left"). If no label fits, use input_type "text" instead.
 
 
 ## Step 2 - Generate follow-up questions
@@ -193,7 +194,7 @@ I have had a sharp pain in my lower back for 3 days after lifting something heav
   "extracted": [
     {
       "question": "Where is the pain located?",
-      "answer": "Lower back",
+      "answer": "loin",
       "input_type": "body_location",
     },
     {
