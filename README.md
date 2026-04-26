@@ -4,6 +4,12 @@ AI-assisted medical diagnostic analysis platform. Describe your symptoms, answer
 
 > **Disclaimer:** Salus is a research tool and does not constitute medical advice. Always consult a qualified healthcare professional for medical decisions.
 
+## Demo
+
+Watch a short [demonstration video](https://youtu.be/GlbjzvNnpjQ) of the project: 
+
+[<img src="https://img.youtube.com/vi/GlbjzvNnpjQ/0.jpg" width="480">](https://youtu.be/GlbjzvNnpjQ)
+
 ## How it works
 
 1. **Describe your symptoms** — enter a free-text description of what you are experiencing. The AI then extracts any structured information present in your description (location, duration, severity, etc.) and pre-fills those answers for you.
