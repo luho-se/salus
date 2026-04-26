@@ -99,9 +99,12 @@ def create_diagnosis(project_id: int, diagnosis_id: int) -> None:
 
 		for q in questions:
 			answer = next((a for a in answers if a["question_id"] == q["id"]), None)
-			if answer is None:
-				raise ValueError(f"No answer found for question ID {q['id']}")
+			if answer is None or not answer.get("answer"):
+				continue
 			data[q['id']] = construct_q_and_a_item(q["question"], answer["answer"])
+
+		if not data:
+			raise ValueError("No answered questions available for diagnosis")
 
 		config = LLMShapConfig(system_instruction=load_prompt())
 		llmshap_service = LLMShapService(config=config)
