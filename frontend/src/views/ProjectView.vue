@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator'
 import { useDiagnosisStore } from '@/stores/diagnosis.store'
 import { useProjectStore } from '@/stores/projects.store'
 import { ChevronRight } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -21,12 +21,15 @@ const generating = ref(false)
 const project = computed(() => projectStore.getProjectById(projectId.value))
 const diagnosisList = computed(() => diagnosisStore.getDiagnosisListByProjectId(projectId.value))
 
-onMounted(async () => {
-	await projectStore.loadProject(projectId.value)
+async function loadData(id: number) {
+	await projectStore.loadProject(id)
 	if (project.value?.step !== 'INITIAL_PROMPT') {
-		diagnosisStore.fetchDiagnosisList(projectId.value)
+		diagnosisStore.fetchDiagnosisList(id)
 	}
-})
+}
+
+onMounted(() => loadData(projectId.value))
+watch(projectId, (id) => loadData(id))
 
 async function handleSubmitPrompt() {
 	const projectIdSnapshot = projectId.value
