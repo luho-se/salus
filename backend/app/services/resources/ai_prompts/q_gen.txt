@@ -95,7 +95,7 @@ const FRONT_PARTS = [
     'arm-left', 'arm-right',
     'elbow-left', 'elbow-right',
     'forearm-left', 'forearm-right',
-    'hands-left', 'hand-right',
+    'hand-left', 'hand-right',
     'chest-left', 'chest-right',
     'ribs-left', 'ribs-right',
     'belly-left', 'belly-right', 'belly',
@@ -104,7 +104,7 @@ const FRONT_PARTS = [
     'innerthigh-left', 'innerthigh-right',
     'knee-left', 'knee-right',
     'calf-left', 'calf-right',
-    'feet-left', 'right-feet',
+    'feet-left', 'feet-right',
 ]
 
 const BACK_PARTS = [

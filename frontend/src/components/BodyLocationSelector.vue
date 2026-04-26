@@ -34,7 +34,7 @@ const FRONT_PARTS = [
 	'arm-left', 'arm-right',
 	'elbow-left', 'elbow-right',
 	'forearm-left', 'forearm-right',
-	'hands-left', 'hand-right',
+	'hand-left', 'hand-right',
 	'chest-left', 'chest-right',
 	'ribs-left', 'ribs-right',
 	'belly-left', 'belly-right', 'belly',
@@ -43,7 +43,7 @@ const FRONT_PARTS = [
 	'innerthigh-left', 'innerthigh-right',
 	'knee-left', 'knee-right',
 	'calf-left', 'calf-right',
-	'feet-left', 'right-feet',
+	'feet-left', 'feet-right',
 ]
 
 const BACK_PARTS = [
@@ -61,7 +61,7 @@ const PART_LABELS: Record<string, string> = {
 	'arm-left': 'Left upper arm', 'arm-right': 'Right upper arm',
 	'elbow-left': 'Left elbow', 'elbow-right': 'Right elbow',
 	'forearm-left': 'Left forearm', 'forearm-right': 'Right forearm',
-	'hands-left': 'Left hand', 'hand-right': 'Right hand',
+	'hand-left': 'Left hand', 'hand-right': 'Right hand',
 	'chest-left': 'Left chest', 'chest-right': 'Right chest',
 	'ribs-left': 'Left ribs', 'ribs-right': 'Right ribs',
 	'belly-left': 'Left abdomen', 'belly-right': 'Right abdomen', 'belly': 'Abdomen',
@@ -70,7 +70,7 @@ const PART_LABELS: Record<string, string> = {
 	'innerthigh-left': 'Left inner thigh', 'innerthigh-right': 'Right inner thigh',
 	'knee-left': 'Left knee', 'knee-right': 'Right knee',
 	'calf-left': 'Left calf', 'calf-right': 'Right calf',
-	'feet-left': 'Left foot', 'right-feet': 'Right foot',
+	'feet-left': 'Left foot', 'feet-right': 'Right foot',
 	'head-back': 'Head', 'nape': 'Nape / Neck',
 	'clavicule-left': 'Left upper back', 'clavicule-right': 'Right upper back',
 	'back-left': 'Left back', 'back-right': 'Right back',
