@@ -1,16 +1,16 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: hackathon-db-prod
+    container_name: salus-db-prod
     environment:
-      POSTGRES_DB: hackathon
+      POSTGRES_DB: salus
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d hackathon"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d salus"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,9 +19,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    container_name: hackathon-backend-prod
+    container_name: salus-backend-prod
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/hackathon
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/salus
     ports:
       - "5000:5000"
     depends_on:
@@ -32,7 +32,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
-    container_name: hackathon-frontend-prod
+    container_name: salus-frontend-prod
     ports:
       - "80:80"
     depends_on:

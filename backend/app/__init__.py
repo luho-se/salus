@@ -12,7 +12,7 @@ from .routes.diagnosis_route import bp as diagnosis_bp
 def create_app() -> Flask:
 	app = Flask(__name__)
 	app.config["DATABASE_URL"] = os.getenv(
-		"DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/hackathon"
+		"DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/salus"
 	)
 
 	CORS(app, resources={r"/api/*": {"origins": "*"}})
