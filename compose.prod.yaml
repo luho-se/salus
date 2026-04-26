@@ -22,6 +22,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile.prod
     container_name: salus-backend-prod
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/salus
     ports:
